@@ -351,4 +351,87 @@ namespace Helpers
 
 		return ss.str().c_str();
 	}
+
+	HRESULT OpenUrlInMicrosoftEdge(__in PCWSTR url)
+	{
+		HRESULT hr = E_FAIL;
+
+		CoInitializeEx(nullptr, COINIT_APARTMENTTHREADED);
+		SHELLEXECUTEINFOW sei = { sizeof sei };
+		sei.lpVerb = L"open";
+		std::wstring mywstring(url);
+		std::wstring concatted_stdstr = L"microsoft-edge:" + mywstring;
+		sei.lpFile = concatted_stdstr.c_str();
+		hr = ShellExecuteExW(&sei);
+
+		return hr;
+	}
+
+	BOOL CALLBACK TerminateAppEnum(HWND hwnd, LPARAM lParam)
+	{
+		DWORD dwID;
+
+		::GetWindowThreadProcessId(hwnd, &dwID);
+
+		if (dwID == (DWORD)lParam)
+		{
+			::PostMessage(hwnd, WM_CLOSE, 0, 0);
+		}
+
+		return TRUE;
+	}
+
+	DWORD WINAPI TerminateApp(DWORD dwPID, DWORD dwTimeout)
+	{
+		HANDLE   hProc;
+		DWORD   dwRet;
+
+		// If we can't open the process with PROCESS_TERMINATE rights,
+		// then we give up immediately.
+		hProc = ::OpenProcess(SYNCHRONIZE | PROCESS_TERMINATE, FALSE, dwPID);
+
+		if (hProc == NULL)
+		{
+			return E_FAIL;
+		}
+
+		// TerminateAppEnum() posts WM_CLOSE to all windows whose PID
+		// matches your process's.
+		EnumWindows((WNDENUMPROC)TerminateAppEnum, (LPARAM)dwPID);
+
+		// Wait on the handle. If it signals, great. If it times out,
+		// then you kill it.
+		if (WaitForSingleObject(hProc, dwTimeout) != WAIT_OBJECT_0)
+		{
+			dwRet = (::TerminateProcess(hProc, 0) ? S_OK : E_FAIL);
+		}
+		else
+		{
+			dwRet = 0;
+		}
+
+		CloseHandle(hProc);
+
+		return dwRet;
+	}
+
+	HRESULT KillAllProcessByExe(const wchar_t *filename)
+	{
+		HANDLE hSnapShot = CreateToolhelp32Snapshot(TH32CS_SNAPALL, NULL);
+		PROCESSENTRY32 pEntry;
+		pEntry.dwSize = sizeof(pEntry);
+		BOOL hRes = Process32First(hSnapShot, &pEntry);
+		while (hRes)
+		{
+			if (wcscmp(pEntry.szExeFile, filename) == 0)
+			{
+				TerminateApp(pEntry.th32ProcessID, 1000);
+
+			}
+			hRes = Process32Next(hSnapShot, &pEntry);
+		}
+		CloseHandle(hSnapShot);
+
+		return S_OK;
+	}
 }

@@ -4,6 +4,9 @@
 
 #pragma once
 #include <functional>
+#include <Shellapi.h>
+#include <Psapi.h>
+#include <Tlhelp32.h>
 
 // Define some assert helper macros
 #define FAIL_IF_NOT_S_OK(hr) ATLENSURE_RETURN_HR(hr == S_OK, SUCCEEDED(hr) ? E_FAIL : hr)
@@ -33,4 +36,7 @@ namespace Helpers
     CStringA GetFileVersion(_In_ LPCWSTR filePath);
 
 	CStringA GetLastErrorMessage();
+
+	HRESULT OpenUrlInMicrosoftEdge(_In_ PCWSTR url);
+	HRESULT KillAllProcessByExe(const wchar_t *filename);
 }
