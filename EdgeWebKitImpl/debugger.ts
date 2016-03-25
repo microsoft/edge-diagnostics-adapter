@@ -738,11 +738,44 @@ module IEDiagnosticsAdapter {
                 });
             }
 
-            this.postNotification("Debugger.paused", {
+            var reason: string = "";
+            switch (breakEventInfo.breakReason) {
+                case BreakReason.Breakpoint:
+                    reason = "breakpoint";
+                    break;
+
+                case BreakReason.Step:
+                    reason = "step";
+                    break;
+
+                case BreakReason.Error:
+                    reason = "exception";
+                    break;
+
+                default:
+                    reason = "other";
+                    break;
+            }
+
+            var notification: IWebKitDebuggerPaused = {
                 callFrames: callFrames,
-                reason: "other",
+                reason: reason,
                 data: null
-            });
+            }
+
+            if (breakEventInfo.breakReason == BreakReason.Breakpoint) {
+                var breakpointIds: string[] = [];
+
+                breakEventInfo.breakpoints.forEach(function (breakpoint) {
+                    breakpointIds.push(breakpoint.breakpointId);
+                });
+
+                notification.hitBreakpoints = breakpointIds;
+            }
+
+            this.postNotification("Debugger.paused", notification);
+
+
             return true;
         }
     }

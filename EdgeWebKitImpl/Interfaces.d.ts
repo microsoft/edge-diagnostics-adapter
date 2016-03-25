@@ -213,4 +213,11 @@ declare module IEDiagnosticsAdapter {
     interface IProxyDebuggerDispatch extends IProxyDispatch {
         postMessageToEngine(id: string, isAtBreakpoint: boolean, data: string): void;
     }
+
+    interface IWebKitDebuggerPaused {
+        callFrames: any,
+        reason: string,
+        data: any,
+        hitBreakpoints?: string[]
+    }
 } 
