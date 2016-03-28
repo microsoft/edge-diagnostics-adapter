@@ -23,6 +23,7 @@ WebSocketHandler::WebSocketHandler(_In_ LPCWSTR rootPath, _In_ HWND adapterhWnd)
 	try
 	{
 		// Initialize the websocket server
+		this->IsServerListening = false;
 		m_server.clear_access_channels(websocketpp::log::alevel::all);
 		m_server.set_http_handler(std::bind(&WebSocketHandler::OnHttp, this, std::placeholders::_1));
 		m_server.set_validate_handler(std::bind(&WebSocketHandler::OnValidate, this, std::placeholders::_1));
@@ -38,19 +39,23 @@ WebSocketHandler::WebSocketHandler(_In_ LPCWSTR rootPath, _In_ HWND adapterhWnd)
 		CString AdaptorLogging_EnvironmentVariable;
 		DWORD ret = AdaptorLogging_EnvironmentVariable.GetEnvironmentVariable(L"AdapterLogging");
 		if (ret > 0 && AdaptorLogging_EnvironmentVariable == L"1") {
-			std::cout << "Logging enabled" << endl;
+			std::wcout << L"Logging enabled" << endl;
 			m_AdaptorLogging_EnvironmentVariable = "1";
 		}
 		else {
 			m_AdaptorLogging_EnvironmentVariable = "";
 		}
 
-		std::cout << "Proxy server listening on port " << port.str() << "..." << endl;
+
+		std::wcout << L"Proxy server listening on port " << m_port << L"..." << endl;
+		this->IsServerListening = true;
 	}
 	catch (websocketpp::exception const &e)
 	{
-		std::cout << "Error: Starting websocket handler: " << e.what();
+		this->IsServerListening = false;
+		std::wcout << L"Error: Starting websocket handler: " << e.what();
 	}
+
 }
 
 // WebSocket Callbacks

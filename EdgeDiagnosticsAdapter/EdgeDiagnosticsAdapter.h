@@ -17,6 +17,7 @@ class EdgeDiagnosticsAdapter :
 public:
     EdgeDiagnosticsAdapter(_In_ LPCWSTR rootPath);
     ~EdgeDiagnosticsAdapter();
+	bool IsServerRunning;
 
     static const CStringA s_Protocol_Version;
 

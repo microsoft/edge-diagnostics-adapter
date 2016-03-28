@@ -220,25 +220,34 @@ int wmain(int argc, wchar_t* argv[])
 		// Load the proxy server
 		EdgeDiagnosticsAdapter proxy(fullPath);
 
-		// Create a message pump
-		MSG msg;
-		::PeekMessage(&msg, NULL, WM_USER, WM_USER, PM_NOREMOVE);
-
-		// Thread message loop
-		BOOL getMessageRet;
-		while ((getMessageRet = ::GetMessage(&msg, NULL, 0, 0)) != 0)
+		if (proxy.IsServerRunning)
 		{
-			if (getMessageRet != -1)
-			{
-				::TranslateMessage(&msg);
-				::DispatchMessage(&msg);
-			}
-		}
 
-		// Leave the window open so we can read the log file
-		wcout << endl << L"Press [ENTER] to exit." << endl;
-		cin.ignore();
+			// Create a message pump
+			MSG msg;
+			::PeekMessage(&msg, NULL, WM_USER, WM_USER, PM_NOREMOVE);
+
+			// Thread message loop
+			BOOL getMessageRet;
+			while ((getMessageRet = ::GetMessage(&msg, NULL, 0, 0)) != 0)
+			{
+				if (getMessageRet != -1)
+				{
+					::TranslateMessage(&msg);
+					::DispatchMessage(&msg);
+				}
+			}
+
+			// Leave the window open so we can read the log file
+			wcout << endl << L"Press [ENTER] to exit." << endl;
+			cin.ignore();
+		}
+		else
+		{
+			wcout << L"Error starting. Quiting.";
+			return E_FAIL;
+		}
 	}
 
-	return 0;
+	return S_OK;
 }

@@ -54,6 +54,7 @@ class WebSocketHandler
 public:
     WebSocketHandler(_In_ LPCWSTR rootPath, _In_ HWND m_hWnd);
     void RunServer();
+	bool IsServerListening;
 
     // Windows messages that IEDiagnosticsAdapter will receive and parse, then have WebSocketHandler manage
     void OnMessageFromIE(string message, HWND proxyHwnd);

@@ -14,17 +14,27 @@ const CStringA EdgeDiagnosticsAdapter::s_Protocol_Version = CStringA("1.1");
 
 EdgeDiagnosticsAdapter::EdgeDiagnosticsAdapter(_In_ LPCWSTR rootPath)
 {
-    // Create our message window used to handle window messages
-    HWND createdWindow = this->Create(HWND_MESSAGE);
-    ATLENSURE_THROW(createdWindow != NULL, E_FAIL);
+	try
+	{
+		// Create our message window used to handle window messages
+		HWND createdWindow = this->Create(HWND_MESSAGE);
+		ATLENSURE_THROW(createdWindow != NULL, E_FAIL);
 
-    // Allow messages from the proxy
-    ::ChangeWindowMessageFilterEx(m_hWnd, WM_COPYDATA, MSGFLT_ALLOW, 0);
-    ::ChangeWindowMessageFilterEx(m_hWnd, Get_WM_SET_CONNECTION_HWND(), MSGFLT_ALLOW, 0);
+		// Allow messages from the proxy
+		::ChangeWindowMessageFilterEx(m_hWnd, WM_COPYDATA, MSGFLT_ALLOW, 0);
+		::ChangeWindowMessageFilterEx(m_hWnd, Get_WM_SET_CONNECTION_HWND(), MSGFLT_ALLOW, 0);
 
-    // Create websocket thread
-    m_webSocketHander = ::make_shared<WebSocketHandler>(rootPath, m_hWnd);
-    boost::thread serverThread(&WebSocketHandler::RunServer, m_webSocketHander);
+		// Create websocket thread
+		m_webSocketHander = ::make_shared<WebSocketHandler>(rootPath, m_hWnd);
+		boost::thread serverThread(&WebSocketHandler::RunServer, m_webSocketHander);
+		this->IsServerRunning = true;
+	}
+	catch(exception const &e)
+	{
+		this->IsServerRunning = false;
+	}
+
+	this->IsServerRunning = this->IsServerRunning  && m_webSocketHander->IsServerListening;
 }
 
 EdgeDiagnosticsAdapter::~EdgeDiagnosticsAdapter()
