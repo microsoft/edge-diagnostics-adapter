@@ -14,4 +14,4 @@ We are aiming to release abinary of the EdgeDiagnosticsAdapter within the next c
 3. Go to http://localhost:9222/
 
 ## Building & Contributing
-To build and contribute to this project take a gander at the wiki pages on [building](https://github.com/Microsoft/EdgeDiagnosticsAdapter/wiki/Building) and [contributing](https://github.com/Microsoft/EdgeDiagnosticsAdapter/wiki/Contributing) 
+To build and contribute to this project take a gander at the wiki pages on [building](https://github.com/Microsoft/EdgeDiagnosticsAdapter/wiki/Building) and contributing (coming soon).
