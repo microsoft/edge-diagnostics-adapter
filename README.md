@@ -1,4 +1,4 @@
-# EdgeDiagnosticsAdapter
+# Edge Diagnostics Adapter
 
 Edge Diagnostics Adapter is a prototype adaptor that enables tools to debug and diagnose Edge using the Chrome Debugging Protocol.
 
@@ -12,4 +12,4 @@ Release coming soon.
 3. Go tohttp://localhost:9222/
 
 ## Building & Contributing
-To build and contribute to this project take a gander at the wiki pages on [building](https://github.com/Microsoft/IEDiagnosticsAdapter/wiki/Building) and [contributing](https://github.com/Microsoft/IEDiagnosticsAdapter/wiki/Contributing) 
+To build and contribute to this project take a gander at the wiki pages on [building](https://github.com/Microsoft/EdgeDiagnosticsAdapter/wiki/Building) and [contributing](https://github.com/Microsoft/EdgeDiagnosticsAdapter/wiki/Contributing) 
