@@ -27,14 +27,12 @@ EdgeDiagnosticsAdapter::EdgeDiagnosticsAdapter(_In_ LPCWSTR rootPath)
 		// Create websocket thread
 		m_webSocketHander = ::make_shared<WebSocketHandler>(rootPath, m_hWnd);
 		boost::thread serverThread(&WebSocketHandler::RunServer, m_webSocketHander);
-		this->IsServerRunning = true;
+		this->IsServerRunning = m_webSocketHander->IsServerListening;
 	}
 	catch(exception const &e)
 	{
 		this->IsServerRunning = false;
 	}
-
-	this->IsServerRunning = this->IsServerRunning  && m_webSocketHander->IsServerListening;
 }
 
 EdgeDiagnosticsAdapter::~EdgeDiagnosticsAdapter()
