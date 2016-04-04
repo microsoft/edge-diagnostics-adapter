@@ -2,8 +2,10 @@
 
 Edge Diagnostics Adapter is a protocol adaptor that enables tools to debug and diagnose Edge using the Chrome Debugging Protocol.
 
+We are aiming to release abinary of the EdgeDiagnosticsAdapter within the next coming weeks, in addition to our Edge Debugger for VSCode.
+
 ## Installation
-Release coming soon.
+*Release coming soon.*
 
 ## Running
 
