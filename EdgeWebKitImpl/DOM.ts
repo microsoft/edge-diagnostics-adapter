@@ -3,7 +3,7 @@
 //
 
 /// <reference path="Interfaces.d.ts"/>
-/// <reference path="IE11.DiagnosticOM.d.ts" />
+/// <reference path="Edge.DiagnosticOM.d.ts" />
 /// <reference path="Browser.ts"/>
 /// <reference path="CSSParser.ts"/>
 

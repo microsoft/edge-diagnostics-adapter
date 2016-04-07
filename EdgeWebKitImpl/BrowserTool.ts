@@ -2,7 +2,7 @@
 // Copyright (C) Microsoft. All rights reserved.
 //
 
-/// <reference path="IE11.DiagnosticOM.d.ts" />
+/// <reference path="Edge.DiagnosticOM.d.ts" />
 /// <reference path="Interfaces.d.ts"/>
 
 /// Proxy to hande the page domain of the Chrome remote debug protocol 

@@ -29,7 +29,7 @@
     <TypeScriptCompile Include="CSSParser.ts" />
     <TypeScriptCompile Include="Debugger.ts" />
     <TypeScriptCompile Include="DOM.ts" />
-    <TypeScriptCompile Include="IE11.DiagnosticOM.d.ts" />
+    <TypeScriptCompile Include="Edge.DiagnosticOM.d.ts" />
     <TypeScriptCompile Include="Interfaces.d.ts" />
     <TypeScriptCompile Include="Page.ts" />
     <TypeScriptCompile Include="BrowserTool.ts" />

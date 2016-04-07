@@ -2,7 +2,7 @@
 // Copyright (C) Microsoft. All rights reserved.
 //
 
-/// <reference path="IE11.DiagnosticOM.d.ts" />
+/// <reference path="Edge.DiagnosticOM.d.ts" />
 /// <reference path="Interfaces.d.ts"/>
 /// <reference path="Browser.ts"/>
 
