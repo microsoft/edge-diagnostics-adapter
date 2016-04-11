@@ -32,7 +32,7 @@ int wmain(int argc, wchar_t* argv[])
 	desc.add_options()
 		("launch,l", po::value<string>(), "Launches Edge. Optionally at the URL specified in the value")
 		("killall,k", "Kills all running Edge processes.")
-		("chrome,c", "Launches Crhome in the background to serve the Chrome Developer Tools.")
+		("chrome,c", "Launches Crhome in the background to serve the Chrome Developer Tools frontend.")
 		;
 
 	po::variables_map vm;

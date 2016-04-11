@@ -83,7 +83,7 @@
       <Optimization>Disabled</Optimization>
       <PreprocessorDefinitions>_DEBUG;_CONSOLE;_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <SDLCheck>true</SDLCheck>
-      <AdditionalIncludeDirectories>$(SolutionDir)External\;..\Output\Published\$(Configuration)\$(Platform)\;..\external\websocketpp-0.5.0\;..\external\boost_1_60_0\;C:\src\EdgeDiagnosticsAdapter\External;..\Common</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir)External\boost_1_60_0\boost;$(SolutionDir)External\;..\Output\Published\$(Configuration)\$(Platform)\;..\external\websocketpp-0.5.0\;..\external\boost_1_60_0\;C:\src\EdgeDiagnosticsAdapter\External;..\Common;$(SolutionDir)External\;..\Common\</AdditionalIncludeDirectories>
       <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
     </ClCompile>
     <Link>
@@ -103,7 +103,7 @@
       <Optimization>Disabled</Optimization>
       <PreprocessorDefinitions>_DEBUG;_CONSOLE;_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <SDLCheck>true</SDLCheck>
-      <AdditionalIncludeDirectories>$(SolutionDir)External;C:\Program Files (x86)\Windows Kits\10\Lib\10.0.10586.0\um\x64;..\Common\;..\Output\Published\$(Configuration)\$(Platform)\;..\external\websocketpp-0.5.0\;..\external\boost_1_60_0\</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir)External\boost_1_60_0\boost;$(SolutionDir)External;C:\Program Files (x86)\Windows Kits\10\Lib\10.0.10586.0\um\x64;..\Common\;..\Output\Published\$(Configuration)\$(Platform)\;..\external\websocketpp-0.5.0\;..\external\boost_1_60_0\;$(SolutionDir)External\;..\Common\</AdditionalIncludeDirectories>
       <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
     </ClCompile>
     <Link>
@@ -128,7 +128,7 @@
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <PreprocessorDefinitions>NDEBUG;_CONSOLE;_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <SDLCheck>true</SDLCheck>
-      <AdditionalIncludeDirectories>$(SolutionDir)External\;..\Output\Published\$(Configuration)\$(Platform);..\external\websocketpp-0.5.0\;..\external\boost_1_57_0\;;C:\src\EdgeDiagnosticsAdapter\External;..\Common</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir)External\boost_1_60_0\boost;$(SolutionDir)External\;..\Output\Published\$(Configuration)\$(Platform);..\external\websocketpp-0.5.0\;..\external\boost_1_57_0\;;C:\src\EdgeDiagnosticsAdapter\External;..\Common;$(SolutionDir)External\;..\Common\</AdditionalIncludeDirectories>
       <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
     </ClCompile>
     <Link>
@@ -155,7 +155,7 @@
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <PreprocessorDefinitions>NDEBUG;_CONSOLE;_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <SDLCheck>true</SDLCheck>
-      <AdditionalIncludeDirectories>$(SolutionDir)External;..\Common\;..\Output\Published\$(Configuration)\$(Platform);..\external\websocketpp-0.5.0\;..\external\boost_1_57_0\;</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir)External\boost_1_60_0\boost;$(SolutionDir)External;..\Common\;..\Output\Published\$(Configuration)\$(Platform);..\external\websocketpp-0.5.0\;..\external\boost_1_57_0\;;$(SolutionDir)External\;..\Common\</AdditionalIncludeDirectories>
       <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
     </ClCompile>
     <Link>
