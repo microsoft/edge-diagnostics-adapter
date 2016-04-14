@@ -1,0 +1,17 @@
+{
+  "name": "edge-diagnostics-adapter",
+  "version": "0.0.1",
+  "description": "Microsoft Edge Diagnostics Adapter",
+  "files": [
+    "dist/x64/EdgeDiagnosticsAdapter.exe",
+    "dist/x64/Proxy64.dll"
+  ],
+  "keywords": [
+    "edge",
+    "diagnostics",
+    "devtools",
+    "browser"
+  ],
+  "author": "Microsoft Corporation",
+  "license": "MIT"
+}
