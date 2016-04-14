@@ -2,16 +2,27 @@
 
 Edge Diagnostics Adapter is a protocol adaptor that enables tools to debug and diagnose Edge using the [Chrome Debugging Protocol](https://chromedevtools.github.io/debugger-protocol-viewer/).
 
-**We are aiming to release a binary of the EdgeDiagnosticsAdapter within the next coming weeks, in addition to our Edge Debugger for VSCode.**
-
 ## Installation
-*Release coming soon.*
 
-## Running
+For now we provide binaries on our [releases page](https://github.com/Microsoft/EdgeDiagnosticsAdapter/releases) and via NPM.
 
-1. Launch Edge and browse to the site you want to debug 
-2. Run the EdgeDiagnosticsAdapter.exe
-3. Go to `http://localhost:9222/`
+#### Install via NPM
+```npm install edge-diagnostics-adapter```
+
+Binary is now located in` ./node_modules/edge-diagnostics-adapter/dist/<platform>`
+
+## Usage
+
+```console
+./<path>/EdgeDiagnosticsAdaptor.exe
+```
+
+* `--launch <url>` for opening Edge with a specific URLt.
+* `Ctrl-C` to quit. Also, the proxy can be left running as a background process.
+
+### View and inspect debuggable tabs
+
+Navigate to [localhost:9222](http://localhost:9222). You'll see a listing of all connected devices.
 
 ## Supported features and API
 
