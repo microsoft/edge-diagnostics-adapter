@@ -136,8 +136,8 @@ void WebSocketHandler::OnHttp(websocketpp::connection_hdl hdl)
 	else if (requestedResource == "/json/version")
 	{
 		// To do: This will need to change to support Edge 
-		CStringA ieVersion = Helpers::GetFileVersion(L"C:\\Windows\\System32\\mshtml.dll");
-		CStringA browser = "Internet Explorer " + ieVersion;
+		CStringA edgeVersion = Helpers::GetFileVersion(L"C:\\Windows\\System32\\edgehtml.dll");
+		CStringA browser = "Microsoft Edge " + edgeVersion;
 		browser = Helpers::EscapeJsonString(CString(browser));
 
 
@@ -155,10 +155,10 @@ void WebSocketHandler::OnHttp(websocketpp::connection_hdl hdl)
 		CStringA userAgent = Helpers::EscapeJsonString(CString(pszUserAgent));
 
 		ss << "{" << endl;
-		ss << "   \"Browser\" : \"" << browser << "\"" << endl;
-		ss << "   \"Protocol-Version\" : \"" << EdgeDiagnosticsAdapter::s_Protocol_Version << "\"" << endl;
-		ss << "   \"User-Agent\" : \"" << userAgent << "\"" << endl;
-		ss << "   \"WebKit-Version\" : \"" << "0" << "\"" << endl;
+		ss << "   \"Browser\" : \"" << browser << "\"" << "," << endl;
+		ss << "   \"Protocol-Version\" : \"" << EdgeDiagnosticsAdapter::s_Protocol_Version << "\"" << "," << endl;
+		ss << "   \"User-Agent\" : \"" << userAgent << "\"" << "," << endl;
+		ss << "   \"WebKit-Version\" : \"" << "0" << "\"" << "" << endl;
 		ss << "}";
 	}
 
