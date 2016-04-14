@@ -18,11 +18,16 @@ Binary is now located in` ./node_modules/edge-diagnostics-adapter/dist/<platform
 ```
 
 * `--launch <url>` for opening Edge with a specific URLt.
-* `Ctrl-C` to quit. Also, the proxy can be left running as a background process.
+* `Ctrl-C` to quit. Also, the adaptor can be left running as a background process.
 
-### View and inspect debuggable tabs
+
+#### Usage via node.
+To simplify usage with Node we are also providing [edge-diagnostics-launch](https://github.com/Microsoft/edge-diagnostics-launch), that works a simple wrapper for the Edge Diagnostics Adapter.
+
+#### View and inspect debuggable targets
 
 Navigate to [localhost:9222](http://localhost:9222). You'll see a listing of all connected devices.
+
 
 ## Supported features and API
 
