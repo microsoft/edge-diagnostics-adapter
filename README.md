@@ -26,12 +26,11 @@ To simplify usage with Node we are also providing [edge-diagnostics-launch](http
 
 #### View and inspect debuggable targets
 
-Navigate to [localhost:9222](http://localhost:9222). You'll see a listing of all connected devices.
-
+Navigate to [localhost:9222](http://localhost:9222). You'll see a listing of all debuggable targets.
 
 ## Supported features and API
 
-See [Supported features and API](https://github.com/Microsoft/EdgeDiagnosticsAdapter/wiki/Supported-features-and-API) or download the [protocol.json]().
+See [supported features and API](https://github.com/Microsoft/EdgeDiagnosticsAdapter/wiki/Supported-features-and-API) or download the [protocol.json]().
 
 ## Building & Contributing
 To build and contribute to this project take a gander at the wiki pages on [building](https://github.com/Microsoft/EdgeDiagnosticsAdapter/wiki/Building) and contributing (coming soon).
