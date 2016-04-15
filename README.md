@@ -31,56 +31,7 @@ Navigate to [localhost:9222](http://localhost:9222). You'll see a listing of all
 
 ## Supported features and API
 
-| Area  | Method    |
-|-------|-----------|
-|  DOM  | getDocument
-|  DOM  | getAttributes
-|  DOM  | hideHighlight
-|  DOM  | highlightNode
-|  DOM  | setInspectModeEnabled
-|  DOM  | requestChildNodes
-|  DOM  | pushNodesByBackendIdsToFrontend
-|  DOM  | pushNodeByPathToFrontend
-|  DOM  | pushNodeByPathToFrontend
-|  CSS  | getInlineStylesForNode
-|  CSS  | getMatchedStylesForNode
-|  CSS  | getComputedStyleForNode
-|  CSS  | getStyleSheetText
-|  CSS  | setPropertyText
-|  Page | enable
-|  Page | reload
-|  Page | navigate
-|  Page | getCookies
-|  Page | getResourceTree
-|  Page | getAnimationsPlaybackRate
-|  Page | getNavigationHistory
-|  Page | deleteCookie
-|  Page | setOverlayMessage
-|  Page | canScreencast
-|  Page | canEmulate
-|  Page | screencastFrameAck
-|  Page | startRecordingFrames
-|  Page | stopRecordingFrames
-|  Page | startScreencast
-|  Page | stopScreencast
-|  Page | setShowViewportSizeOnResize
-| Runtime | enable
-| Runtime | evaluate
-| Runtime | callFunctionOn
-| Runtime | getProperties
-| Script | canSetScriptSource
-| Script | disable
-| Script | enable
-| Script | evaluateOnCallFrame
-| Script | getScriptSource
-| Script | removeBreakpoint
-| Script | pause
-| Script | resume
-| Script | setBreakpointByUrl
-| Script | stepInto
-| Script | stepOut
-| Script | stepOver
-
+See [Supported features and API](https://github.com/Microsoft/EdgeDiagnosticsAdapter/wiki/Supported-features-and-API) or download the [protocol.json]().
 
 ## Building & Contributing
 To build and contribute to this project take a gander at the wiki pages on [building](https://github.com/Microsoft/EdgeDiagnosticsAdapter/wiki/Building) and contributing (coming soon).
