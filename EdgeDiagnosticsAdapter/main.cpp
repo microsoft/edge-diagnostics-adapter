@@ -32,7 +32,6 @@ int wmain(int argc, wchar_t* argv[])
 	desc.add_options()
 		("launch,l", po::value<string>(), "Launches Edge. Optionally at the URL specified in the value")
 		("killall,k", "Kills all running Edge processes.")
-		("chrome,c", "Launches Crhome in the background to serve the Chrome Developer Tools frontend.")
 		;
 
 	po::variables_map vm;
@@ -51,80 +50,6 @@ int wmain(int argc, wchar_t* argv[])
 	{
 		// Set a close handler to shutdown the chrome instance we launch
 		::SetConsoleCtrlHandler(OnClose, TRUE);
-
-		// Launch chrome
-		if (vm.count("chrome"))
-		{
-			CString chromePath;
-
-			// Find the chrome install location via the registry
-			CString keyPath = L"SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\App Paths\\chrome.exe";
-
-			CRegKey regKey;
-
-			// First see if we can find where Chrome is installed from the registry. This will only succeed if Chrome is installed for all users
-			if (regKey.Open(HKEY_LOCAL_MACHINE, keyPath, KEY_READ) == ERROR_SUCCESS)
-			{
-				ULONG bufferSize = MAX_PATH;
-				CString path;
-				LRESULT result = regKey.QueryStringValue(nullptr, path.GetBufferSetLength(bufferSize), &bufferSize);
-				path.ReleaseBufferSetLength(bufferSize);
-				if (result == ERROR_SUCCESS)
-				{
-					chromePath = path;
-				}
-			}
-
-			if (chromePath.GetLength() == 0)
-			{
-				// If Chrome is only installed for the current user, look in \AppData\Local\Google\Chrome\Application\ for Chrome.exe
-				CString appPath;
-				::SHGetFolderPath(NULL, CSIDL_LOCAL_APPDATA, NULL, SHGFP_TYPE_CURRENT, appPath.GetBuffer(MAX_PATH + 1));
-				appPath.ReleaseBuffer();
-				chromePath = appPath + L"\\Google\\Chrome\\Application\\chrome.exe";
-			}
-
-			// Get a temp location
-			CString temp;
-			Helpers::ExpandEnvironmentString(L"%Temp%", temp);
-
-			// Set arguments for the chrome that we launch
-			CString arguments;
-			arguments.Format(L"about:blank --remote-debugging-port=9223 --window-size=0,0 --silent-launch --no-first-run --no-default-browser-check --user-data-dir=\"%s\"", temp);
-
-			// Launch the process
-			STARTUPINFO si = { 0 };
-			PROCESS_INFORMATION pi = { 0 };
-			si.cb = sizeof(si);
-			si.wShowWindow = SW_MINIMIZE;
-
-			BOOL result = ::CreateProcess(
-				chromePath,
-				arguments.GetBuffer(),
-				nullptr,
-				nullptr,
-				FALSE,
-				0,
-				nullptr,
-				temp,
-				&si,
-				&pi);
-			arguments.ReleaseBuffer();
-
-			if (result)
-			{
-				// Store the handles
-				CHandle hThread(pi.hThread);
-				hChromeProcess.Attach(pi.hProcess);
-				DWORD waitResult = ::WaitForInputIdle(hChromeProcess, 30000);
-			}
-			else
-			{
-				std::cerr << "Could not open Chrome. Please ensure that Chrome is installed." << std::endl;
-				system("pause");
-				return -1;
-			}
-		}
 
 		// Kill all Edge instances if their is an aegument /killall
 		if (vm.count("killall"))
