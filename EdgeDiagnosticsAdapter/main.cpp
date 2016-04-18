@@ -30,6 +30,7 @@ int wmain(int argc, wchar_t* argv[])
 
 	po::options_description desc("Allowed options");
 	desc.add_options()
+		("help,h", "Shows available options")
 		("launch,l", po::value<string>(), "Launches Edge. Optionally at the URL specified in the value")
 		("killall,k", "Kills all running Edge processes.")
 		("chrome,c", "Launches Crhome in the background to serve the Chrome Developer Tools frontend.")
@@ -51,6 +52,12 @@ int wmain(int argc, wchar_t* argv[])
 	{
 		// Set a close handler to shutdown the chrome instance we launch
 		::SetConsoleCtrlHandler(OnClose, TRUE);
+
+		// Show available options
+		if (vm.count("help"))
+		{
+		  std::cerr << desc << std::endl;
+		}
 
 		// Launch chrome
 		if (vm.count("chrome"))
