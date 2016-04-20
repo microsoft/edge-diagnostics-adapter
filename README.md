@@ -17,7 +17,10 @@ Binary is now located in` ./node_modules/edge-diagnostics-adapter/dist/<platform
 ./<path>/EdgeDiagnosticsAdaptor.exe
 ```
 
-* `--launch <url>` for opening Edge with a specific URLt.
+* `--help` - show available commands
+* `--launch <url>` - for opening Edge with a specific URL.
+* `--port <url>` - the port number to listen on. Default is 9222.
+* `--killall` - kills all running Edge processes.
 * `Ctrl-C` to quit. Also, the adaptor can be left running as a background process.
 
 
