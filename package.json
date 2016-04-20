@@ -4,7 +4,10 @@
   "description": "Microsoft Edge Diagnostics Adapter",
   "files": [
     "dist/x64/EdgeDiagnosticsAdapter.exe",
-    "dist/x64/Proxy64.dll"
+    "dist/x64/Proxy64.dll",
+    "dist/x64/Proxy.dll",
+    "dist/x86/EdgeDiagnosticsAdapter.exe",
+    "dist/x86/Proxy.dll"
   ],
   "keywords": [
     "edge",
