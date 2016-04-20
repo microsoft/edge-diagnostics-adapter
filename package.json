@@ -1,6 +1,6 @@
 {
   "name": "edge-diagnostics-adapter",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "Microsoft Edge Diagnostics Adapter",
   "files": [
     "dist/x64/EdgeDiagnosticsAdapter.exe",
