@@ -7,7 +7,7 @@
 /// <disable code="SA9017" />
 /// <disable code="SA9014" />
 
-module IEDiagnosticsAdapter {
+module EdgeDiagnosticsAdapter {
     "use strict";
     /**
      * Utility functions for verifying internal state.

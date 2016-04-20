@@ -27,6 +27,11 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "EdgeDiagnosticsAdapter", "E
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "EdgeWebkitImpl", "EdgeWebkitImpl\EdgeWebkitImpl.csproj", "{1405EE7F-BDA9-4692-B689-200CA8DC1FBF}"
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{E1DC8AAC-B98E-42F5-AC7B-AF6E0F52B22B}"
+	ProjectSection(SolutionItems) = preProject
+		protocol.json = protocol.json
+	EndProjectSection
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Win32 = Debug|Win32

@@ -5,13 +5,14 @@
 /// <reference path="Interfaces.d.ts"/>
 /// <reference path="Edge.DiagnosticOM.d.ts" />
 
-module IEDiagnosticsAdapter {
+module EdgeDiagnosticsAdapter {
     "use strict";
 
     declare var host: any; // todo: create some interface for host
     declare var request: any; // todo: create some interface for request
 
     declare var browser: DiagnosticsOM.IBrowser;
+    declare var diagnosticsScript: DiagnosticsOM.IDiagnosticsScript;
     export class BrowserHandler {
         private _windowExternal: any; // todo: Make an appropriate TS interface for external
 
@@ -108,12 +109,41 @@ module IEDiagnosticsAdapter {
                         case "Custom":
                             switch (methodParts[1]) {
                                 case "toolsDisconnected":
-                                    IEDiagnosticsAdapter.pageHandler.onNavigate();
-                                    IEDiagnosticsAdapter.domHandler.onNavigate();
+                                    EdgeDiagnosticsAdapter.pageHandler.onNavigate();
+                                    EdgeDiagnosticsAdapter.domHandler.onNavigate();
                                     break;
+
                                 case "testResetState":
-                                    IEDiagnosticsAdapter.pageHandler.onNavigate();
-                                    IEDiagnosticsAdapter.domHandler.resetState();
+                                    EdgeDiagnosticsAdapter.pageHandler.onNavigate();
+                                    EdgeDiagnosticsAdapter.domHandler.resetState();
+                                    break;
+
+                                case "setScriptSource":
+                                    // The 
+
+                                    var scriptId: number = parseInt(request.params.scriptId);
+                                    var scriptSource: string = request.params.scrriptSource;
+                                    var isPreviewEdit: boolean = request.params.isPreview;
+
+                                    var processedResult: IWebKitResult;
+                                    
+                                    // Not applying the edit and as all the return values are related to call stacks we're just going to return
+                                    if (isPreviewEdit) {
+                                        processedResult = {
+                                            result: true
+                                        };
+                                    } else {
+                                        // Todo: Make this work for script documents in different windows
+                                        diagnosticsScript.editSource(<any>browser.document.defaultView, scriptId, scriptSource);
+
+                                        // The Chrome API works when at a breakpoint and sends back changes stacks etc.
+                                        // As Chakra doesn't support editting when at a breakpoint we can't return any stacks or the like
+                                        processedResult = {
+                                            result: true
+                                        };
+                                    }
+
+                                    browserHandler.postResponse(request.id, processedResult);
                                     break;
                             }
 
@@ -142,6 +172,43 @@ module IEDiagnosticsAdapter {
 
                         case "BrowserTool":
                             browserToolHandler.processMessage(methodParts[1], request);
+                            break;
+
+                        case "Debugger":
+                            switch (methodParts[1]) {
+                                case "setScriptSource":
+                                    var scriptId: number = parseInt(request.params.scriptId);
+                                    var scriptSource: string = request.params.scriptSource;
+                                    var isPreviewEdit: boolean = (request.params.isPreview)? true: false;
+
+                                    var processedResult: IWebKitResult;
+                                    
+                                    // Not applying the edit and as all the return values are related to call stacks so we're just going to return
+                                    if (isPreviewEdit) {
+                                        processedResult = {
+                                            result: true
+                                        };
+                                    } else {
+                                        try {
+                                            // Todo: Make this work for script documents in different windows
+                                            var result:any = diagnosticsScript.editSource(<any>browser.document.defaultView, scriptId, scriptSource);
+
+                                            // The Chrome API works when at a breakpoint and sends back changes stacks etc.
+                                            // As Chakra doesn't support editting when at a breakpoint we can't return any stacks or the like
+                                            processedResult = {
+                                                result: true
+                                            };
+                                        } catch (ex) {
+                                            processedResult = {
+                                                error: ex
+                                            };
+                                        }
+
+                                    }
+
+                                    browserHandler.postResponse(request.id, processedResult);
+                                    break;
+                            }
                             break;
 
                         default:

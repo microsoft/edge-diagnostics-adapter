@@ -12,3 +12,4 @@
 #define IDR_ASSERT_SCRIPT                108
 #define IDR_CSSPARSER_SCRIPT             109
 #define IDR_BROWSERTOOL_SCRIPT           110
+#define IDR_PROTOCOLJSON                 111

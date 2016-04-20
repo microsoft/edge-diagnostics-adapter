@@ -7,7 +7,7 @@
 /// <reference path="Browser.ts"/>
 
 /// Proxy to handle the page domain of the Chrome remote debug protocol 
-module IEDiagnosticsAdapter {
+module EdgeDiagnosticsAdapter {
     export class WebkitCookie implements IWebKitCookie {
         public name: string;
         public value: string;

@@ -14,7 +14,7 @@
 #include <Psapi.h>
 #include <Wininet.h>
 
-WebSocketHandler::WebSocketHandler(_In_ LPCWSTR rootPath, _In_ HWND adapterhWnd) :
+WebSocketHandler::WebSocketHandler(_In_ LPCWSTR rootPath, _In_ HWND adapterhWnd, _In_ string port) :
 	m_rootPath(rootPath),
 	m_AdapterhWnd(adapterhWnd),
 	m_port(9222),
@@ -30,10 +30,8 @@ WebSocketHandler::WebSocketHandler(_In_ LPCWSTR rootPath, _In_ HWND adapterhWnd)
 		m_server.set_message_handler(std::bind(&WebSocketHandler::OnMessage, this, std::placeholders::_1, std::placeholders::_2));
 		m_server.set_close_handler(std::bind(&WebSocketHandler::OnClose, this, std::placeholders::_1));
 
-		std::stringstream port;
-		port << m_port;
 		m_server.init_asio();
-		m_server.listen("0.0.0.0", port.str());
+		m_server.listen("0.0.0.0", port);
 		m_server.start_accept();
 
 		CString AdaptorLogging_EnvironmentVariable;
@@ -75,6 +73,17 @@ void WebSocketHandler::OnHttp(websocketpp::connection_hdl hdl)
 		if (hr == S_OK)
 		{
 			CStringA page(inspect);
+			ss << page;
+		}
+	}
+	else if (requestedResource == "/protocol.json")
+	{
+		// Load and return the protocol.json file
+		CString protocolJsonFile;
+		HRESULT hr = Helpers::ReadFileFromModule(MAKEINTRESOURCE(IDR_PROTOCOLJSON), protocolJsonFile);
+		if (hr == S_OK)
+		{
+			CStringA page(protocolJsonFile);
 			ss << page;
 		}
 	}
@@ -135,12 +144,14 @@ void WebSocketHandler::OnHttp(websocketpp::connection_hdl hdl)
 	}
 	else if (requestedResource == "/json/version")
 	{
-		// To do: This will need to change to support Edge 
-		CStringA edgeVersion = Helpers::GetFileVersion(L"C:\\Windows\\System32\\edgehtml.dll");
+		// Todo: This is currently broken as the edgehtml version number is set at 11
+		//CStringA edgeVersion = Helpers::GetFileVersion(L"C:\\Windows\\System32\\edgehtml.dll");
+		CStringA edgeVersion = "13";
 		CStringA browser = "Microsoft Edge " + edgeVersion;
 		browser = Helpers::EscapeJsonString(CString(browser));
 
-
+		/*
+		Todo: Currently Edge does not store it's UA string and there is no  way to fetch the UA without loading Edge.
 		DWORD dwUASize = 0;
 		UrlMkGetSessionOption(URLMON_OPTION_USERAGENT, nullptr, 0, &dwUASize, 0);
 
@@ -153,6 +164,10 @@ void WebSocketHandler::OnHttp(websocketpp::connection_hdl hdl)
 		UrlMkGetSessionOption(URLMON_OPTION_USERAGENT, pszUserAgent, dwUASize, &dwUASizeOut, 0); // Don't check return value - this api always returns an error
 
 		CStringA userAgent = Helpers::EscapeJsonString(CString(pszUserAgent));
+
+		*/
+
+		CStringA userAgent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/46.0.2486.0 Safari/537.36 Edge/13.10586";
 
 		ss << "{" << endl;
 		ss << "   \"Browser\" : \"" << browser << "\"" << "," << endl;

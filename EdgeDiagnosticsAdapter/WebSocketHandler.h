@@ -52,7 +52,7 @@ struct IEInstance
 class WebSocketHandler
 {
 public:
-    WebSocketHandler(_In_ LPCWSTR rootPath, _In_ HWND m_hWnd);
+    WebSocketHandler(_In_ LPCWSTR rootPath, _In_ HWND m_hWnd, _In_ string port);
     void RunServer();
 	bool IsServerListening;
 

@@ -7,7 +7,7 @@
 /// <reference path="Browser.ts"/>
 /// <reference path="CSSParser.ts"/>
 
-module IEDiagnosticsAdapter {
+module EdgeDiagnosticsAdapter {
     "use strict";
 
     declare var browser: DiagnosticsOM.IBrowser;

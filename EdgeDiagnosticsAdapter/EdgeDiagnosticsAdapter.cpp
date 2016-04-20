@@ -11,8 +11,15 @@
 #include <Psapi.h>
 
 const CStringA EdgeDiagnosticsAdapter::s_Protocol_Version = CStringA("1.1");
+const string EdgeDiagnosticsAdapter::s_Default_Port = "9222";
+
 
 EdgeDiagnosticsAdapter::EdgeDiagnosticsAdapter(_In_ LPCWSTR rootPath)
+{
+	EdgeDiagnosticsAdapter(rootPath, EdgeDiagnosticsAdapter::s_Default_Port);
+}
+
+EdgeDiagnosticsAdapter::EdgeDiagnosticsAdapter(_In_ LPCWSTR rootPath, _In_ string port)
 {
 	try
 	{
@@ -25,7 +32,7 @@ EdgeDiagnosticsAdapter::EdgeDiagnosticsAdapter(_In_ LPCWSTR rootPath)
 		::ChangeWindowMessageFilterEx(m_hWnd, Get_WM_SET_CONNECTION_HWND(), MSGFLT_ALLOW, 0);
 
 		// Create websocket thread
-		m_webSocketHander = ::make_shared<WebSocketHandler>(rootPath, m_hWnd);
+		m_webSocketHander = ::make_shared<WebSocketHandler>(rootPath, m_hWnd, port);
 		boost::thread serverThread(&WebSocketHandler::RunServer, m_webSocketHander);
 		this->IsServerRunning = m_webSocketHander->IsServerListening;
 	}

@@ -4,7 +4,7 @@
 
 /// <reference path="Interfaces.d.ts"/>
 
-module IEDiagnosticsAdapter.Common {
+module EdgeDiagnosticsAdapter.Common {
     "use strict";
 
     var mapDocumentToFrameId: WeakMap<Document, string> = new WeakMap<Document, string>();

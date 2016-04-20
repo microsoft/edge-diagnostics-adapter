@@ -23,17 +23,95 @@ BOOL WINAPI OnClose(DWORD reason)
 	return TRUE;
 }
 
+CString getPathToCurrentExeContainer()
+{
+	// Get the current path that we are running from
+	CString fullPath;
+	DWORD count = ::GetModuleFileName(nullptr, fullPath.GetBuffer(MAX_PATH), MAX_PATH);
+	fullPath.ReleaseBufferSetLength(count);
+
+	LPWSTR buffer = fullPath.GetBuffer();
+	LPWSTR newPath = ::PathFindFileName(buffer);
+	if (newPath && newPath != buffer)
+	{
+		fullPath.ReleaseBufferSetLength((newPath - buffer));
+	}
+	else
+	{
+		fullPath.ReleaseBuffer();
+	}
+
+	return fullPath;
+}
+
+void setSecurityACLs()
+{
+	CString fullPath = getPathToCurrentExeContainer();
+	// Check to make sure that the dll has the ACLs to load in an appcontainer
+	// We're doing this here as the adapter has no setup script and should be xcopy deployable/removeable
+
+	PACL pOldDACL = NULL, pNewDACL = NULL;
+	PSECURITY_DESCRIPTOR pSD = NULL;
+	EXPLICIT_ACCESS ea;
+	SECURITY_INFORMATION si = DACL_SECURITY_INFORMATION;
+
+	// The check is done on the folder and should be inherited to all objects
+	DWORD dwRes = GetNamedSecurityInfo(fullPath, SE_FILE_OBJECT, DACL_SECURITY_INFORMATION, NULL, NULL, &pOldDACL, NULL, &pSD);
+
+	// Initialize an EXPLICIT_ACCESS structure for the new ACE. 
+	ZeroMemory(&ea, sizeof(EXPLICIT_ACCESS));
+	ea.grfAccessPermissions = GENERIC_READ | GENERIC_EXECUTE;
+	ea.grfAccessMode = SET_ACCESS;
+	ea.grfInheritance = SUB_CONTAINERS_AND_OBJECTS_INHERIT;
+	ea.Trustee.TrusteeForm = TRUSTEE_IS_NAME;
+	ea.Trustee.TrusteeType = TRUSTEE_IS_WELL_KNOWN_GROUP;
+	ea.Trustee.ptstrName = L"ALL APPLICATION PACKAGES";
+
+	// Create a new ACL that merges the new ACE into the existing DACL.
+	dwRes = SetEntriesInAcl(1, &ea, pOldDACL, &pNewDACL);
+	if (dwRes == ERROR_SUCCESS)
+	{
+		dwRes = SetNamedSecurityInfo(fullPath.GetBuffer(), SE_FILE_OBJECT, si, NULL, NULL, pNewDACL, NULL);
+		if (dwRes == ERROR_SUCCESS)
+		{
+
+		}
+	}
+
+	if (dwRes != ERROR_SUCCESS)
+	{
+		// The ACL was not set, this isn't fatal as it only impacts IE in EPM and Edge and the user can set it manually
+		wcout << L"Could not set ACL to allow access to IE EPM or Edge.";
+		wcout << L"\n";
+		wcout << Helpers::GetLastErrorMessage().GetBuffer();
+		wcout << L"\n";
+		wcout << L"You can set the ACL manually by adding Read & Execute permissions for 'All APPLICATION PACAKGES' to each dll.";
+		wcout << L"\n";
+	}
+
+	if (pSD != NULL)
+	{
+		LocalFree((HLOCAL)pSD);
+	}
+	if (pNewDACL != NULL)
+	{
+		LocalFree((HLOCAL)pNewDACL);
+	}
+}
+
 int wmain(int argc, wchar_t* argv[])
 {
-	// Initialize COM and deinitialize when we go out of scope
-	HRESULT hrCoInit = ::CoInitializeEx(nullptr, COINIT_APARTMENTTHREADED | COINIT_DISABLE_OLE1DDE);
+	//::MessageBox(NULL, L"Stop here", L"STOP!", MB_ICONWARNING | MB_CANCELTRYCONTINUE | MB_DEFBUTTON3);
+
+	std:cout << "Edge Diagnostics Adapter" << std::endl;
 
 	po::options_description desc("Allowed options");
 	desc.add_options()
+		("help,h", "Prints this help text.")
 		("launch,l", po::value<string>(), "Launches Edge. Optionally at the URL specified in the value")
 		("killall,k", "Kills all running Edge processes.")
 		("chrome,c", "Launches Crhome in the background to serve the Chrome Developer Tools frontend.")
-		;
+		("port,p", po::value<string>(), "The port number to listen on. Default is 9222.");
 
 	po::variables_map vm;
 	try
@@ -46,6 +124,16 @@ int wmain(int argc, wchar_t* argv[])
 		std::cerr << desc << std::endl;
 		return E_FAIL;
 	}
+
+	if (vm.count("help"))
+	{
+		std::cout << desc << std::endl;
+		return S_OK;
+	}
+
+
+	// Initialize COM and deinitialize when we go out of scope
+	HRESULT hrCoInit = ::CoInitializeEx(nullptr, COINIT_APARTMENTTHREADED | COINIT_DISABLE_OLE1DDE);
 
 	shared_ptr<HRESULT> spCoInit(&hrCoInit, [](const HRESULT* hrCom) -> void { if (SUCCEEDED(*hrCom)) { ::CoUninitialize(); } });
 	{
@@ -150,75 +238,16 @@ int wmain(int argc, wchar_t* argv[])
 			}
 		}
 
-		// Get the current path that we are running from
-		CString fullPath;
-		DWORD count = ::GetModuleFileName(nullptr, fullPath.GetBuffer(MAX_PATH), MAX_PATH);
-		fullPath.ReleaseBufferSetLength(count);
-
-		LPWSTR buffer = fullPath.GetBuffer();
-		LPWSTR newPath = ::PathFindFileName(buffer);
-		if (newPath && newPath != buffer)
+		string port = EdgeDiagnosticsAdapter::s_Default_Port;
+		if (vm.count("port"))
 		{
-			fullPath.ReleaseBufferSetLength((newPath - buffer));
-		}
-		else
-		{
-			fullPath.ReleaseBuffer();
+			port = vm["port"].as<string>();
 		}
 
-		// Check to make sure that the dll has the ACLs to load in an appcontainer
-		// We're doing this here as the adapter has no setup script and should be xcopy deployable/removeable
-
-		PACL pOldDACL = NULL, pNewDACL = NULL;
-		PSECURITY_DESCRIPTOR pSD = NULL;
-		EXPLICIT_ACCESS ea;
-		SECURITY_INFORMATION si = DACL_SECURITY_INFORMATION;
-
-		// The check is done on the folder and should be inherited to all objects
-		DWORD dwRes = GetNamedSecurityInfo(fullPath, SE_FILE_OBJECT, DACL_SECURITY_INFORMATION, NULL, NULL, &pOldDACL, NULL, &pSD);
-
-		// Initialize an EXPLICIT_ACCESS structure for the new ACE. 
-		ZeroMemory(&ea, sizeof(EXPLICIT_ACCESS));
-		ea.grfAccessPermissions = GENERIC_READ | GENERIC_EXECUTE;
-		ea.grfAccessMode = SET_ACCESS;
-		ea.grfInheritance = SUB_CONTAINERS_AND_OBJECTS_INHERIT;
-		ea.Trustee.TrusteeForm = TRUSTEE_IS_NAME;
-		ea.Trustee.TrusteeType = TRUSTEE_IS_WELL_KNOWN_GROUP;
-		ea.Trustee.ptstrName = L"ALL APPLICATION PACKAGES";
-
-		// Create a new ACL that merges the new ACE into the existing DACL.
-		dwRes = SetEntriesInAcl(1, &ea, pOldDACL, &pNewDACL);
-		if (dwRes == ERROR_SUCCESS)
-		{
-			dwRes = SetNamedSecurityInfo(fullPath.GetBuffer(), SE_FILE_OBJECT, si, NULL, NULL, pNewDACL, NULL);
-			if (dwRes == ERROR_SUCCESS)
-			{
-
-			}
-		}
-
-		if (dwRes != ERROR_SUCCESS)
-		{
-			// The ACL was not set, this isn't fatal as it only impacts IE in EPM and Edge and the user can set it manually
-			wcout << L"Could not set ACL to allow access to IE EPM or Edge.";
-			wcout << L"\n";
-			wcout << Helpers::GetLastErrorMessage().GetBuffer();
-			wcout << L"\n";
-			wcout << L"You can set the ACL manually by adding Read & Execute permissions for 'All APPLICATION PACAKGES' to each dll.";
-			wcout << L"\n";
-		}
-
-		if (pSD != NULL)
-		{
-			LocalFree((HLOCAL)pSD);
-		}
-		if (pNewDACL != NULL)
-		{
-			LocalFree((HLOCAL)pNewDACL);
-		}
+		setSecurityACLs();
 
 		// Load the proxy server
-		EdgeDiagnosticsAdapter proxy(fullPath);
+		EdgeDiagnosticsAdapter proxy(getPathToCurrentExeContainer(), port);
 
 		if (proxy.IsServerRunning)
 		{
@@ -251,3 +280,5 @@ int wmain(int argc, wchar_t* argv[])
 
 	return S_OK;
 }
+
+

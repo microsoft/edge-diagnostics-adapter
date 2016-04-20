@@ -304,6 +304,12 @@ declare module DiagnosticsOM {
         /*get*/ functionName: string;
         /*get*/ line: number;
     }
+
+    export interface IDiagnosticsScript {
+        editSource(window: any, scriptId: number, sourceText: string): ISourceEdit;
+        debugEval(script: string, isNonUserCode: boolean): void;
+        getStackTrace(maxDepth: number): IFrame[];
+    }
 }
 
 declare var browser: DiagnosticsOM.IBrowser;

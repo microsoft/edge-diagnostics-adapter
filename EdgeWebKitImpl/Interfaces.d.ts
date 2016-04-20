@@ -39,7 +39,7 @@ declare var Set: {
     new <T>(): Set<T>;
 }
 
-declare module IEDiagnosticsAdapter {
+declare module EdgeDiagnosticsAdapter {
     const enum NodeType {
         ElementNode = 1,
         AttributeNode = 2,

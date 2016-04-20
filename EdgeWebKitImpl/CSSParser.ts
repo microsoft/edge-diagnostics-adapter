@@ -4,7 +4,7 @@
 
 /// <reference path="Interfaces.d.ts"/>
 
-module IEDiagnosticsAdapter {
+module EdgeDiagnosticsAdapter {
     "use strict";
 
     /**

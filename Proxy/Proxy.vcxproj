@@ -186,7 +186,7 @@
       <OptimizeReferences>true</OptimizeReferences>
       <ModuleDefinitionFile>Proxy.def</ModuleDefinitionFile>
       <AdditionalLibraryDirectories>..\Output\Published\$(Configuration)\;</AdditionalLibraryDirectories>
-      <AdditionalDependencies>chakra.lib;version.lib;Common.lib;DebuggerCore.lib</AdditionalDependencies>
+      <AdditionalDependencies>chakrart.lib;version.lib;Common.lib;DebuggerCore.lib</AdditionalDependencies>
     </Link>
     <Midl>
       <OutputDirectory>..\Output\Published\$(Configuration)\$(Platform)\</OutputDirectory>

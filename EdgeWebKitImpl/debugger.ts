@@ -5,7 +5,7 @@
 /// <reference path="Interfaces.d.ts"/>
 /// <reference path="Common.ts"/>
 
-module IEDiagnosticsAdapter {
+module EdgeDiagnosticsAdapter {
     "use strict";
 
     enum BreakResumeAction {
@@ -411,7 +411,7 @@ module IEDiagnosticsAdapter {
             var processedResult: IWebKitResult;
 
             switch (method) {
-                // copy-pasta from runtime.ts, why is this is two places???
+                // This function is handleded both here and in runtime.ts this implementation handles messages when at a breakpoint the runtime.ts one when not.
                 case "enable":
                     processedResult = { result: {} };
                     break;
@@ -607,6 +607,7 @@ module IEDiagnosticsAdapter {
                     break;
 
                 case "setScriptSource":
+                    host.postMessageToEngine("browser", this._isAtBreakpoint, JSON.stringify(request));
                     break;
 
                 case "stepInto":
