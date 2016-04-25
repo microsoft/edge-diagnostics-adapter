@@ -11,7 +11,7 @@ For now we provide binaries on our [releases page](https://github.com/Microsoft/
 
 Binary is now located in` ./node_modules/edge-diagnostics-adapter/dist/<platform>`
 
-## Usagea
+## Usage
 
 ```console
 ./<path>/EdgeDiagnosticsAdaptor.exe
