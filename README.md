@@ -1,6 +1,6 @@
 # Edge Diagnostics Adapter
 
-Edge Diagnostics Adapter is a protocol adaptor that enables tools to debug and diagnose Edge using the [Chrome Debugging Protocol](https://chromedevtools.github.io/debugger-protocol-viewer/).
+Edge Diagnostics Adapter is a protocol adapter that enables tools to debug and diagnose Edge using the [Chrome Debugging Protocol](https://chromedevtools.github.io/debugger-protocol-viewer/).
 
 ## Installation
 
@@ -11,7 +11,7 @@ For now we provide binaries on our [releases page](https://github.com/Microsoft/
 
 Binary is now located in` ./node_modules/edge-diagnostics-adapter/dist/<platform>`
 
-## Usage
+## Usagea
 
 ```console
 ./<path>/EdgeDiagnosticsAdaptor.exe
@@ -21,7 +21,7 @@ Binary is now located in` ./node_modules/edge-diagnostics-adapter/dist/<platform
 * `--launch <url>` - for opening Edge with a specific URL.
 * `--port <url>` - the port number to listen on. Default is 9222.
 * `--killall` - kills all running Edge processes.
-* `Ctrl-C` to quit. Also, the adaptor can be left running as a background process.
+* `Ctrl-C` to quit. Also, the adapter can be left running as a background process.
 
 
 #### Usage via node.
