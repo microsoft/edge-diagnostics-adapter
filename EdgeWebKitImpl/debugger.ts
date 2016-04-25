@@ -671,15 +671,27 @@ module EdgeDiagnosticsAdapter {
                 var document: IDocument = documents[i];
                 this._documentMap.set(document.url, document.docId);
 
+                // document.sourceMapUrlFromHeader is an empty string if no map was found
+                var sourceMapUrl = document.sourceMapUrlFromHeader;
+                if (!sourceMapUrl || sourceMapUrl === "") {
+                    sourceMapUrl = this.findSourceAttribute("sourceMappingURL", this._debugger.getSourceText(document.docId).text);
+                }
+
+                var docUrl = document.url;
+                var sourceUrlComment = this.findSourceAttribute("sourceURL", this._debugger.getSourceText(document.docId).text);
+                if (sourceUrlComment && sourceUrlComment.length > 0) {
+                    docUrl = sourceUrlComment;
+                }
+
                 this.postNotification("Debugger.scriptParsed", {
                     scriptId: "" + document.docId,
-                    url: document.url,
+                    url: docUrl,
                     startLine: 0,
                     startColumn: 0,
                     endLine: document.length,
                     endColumn: document.length,
                     isContentScript: false,
-                    sourceMapURL: document.sourceMapUrlFromHeader
+                    sourceMapURL: sourceMapUrl
                 });
             }
         }
@@ -776,8 +788,49 @@ module EdgeDiagnosticsAdapter {
 
             this.postNotification("Debugger.paused", notification);
 
-
             return true;
+        }
+
+        /**
+        * Searches the specified code text for an attribute comment. Supported forms are line or
+        * block comments followed by # (or @, though this is deprecated):
+        * //# attribute=..., /*# attribute=... * /, //@ attribute=..., and /*@ attribute=... * /
+        * @param attribute Name of the attribute to find
+        * @param codeContent Source code to search for attribute comment
+        * @return The attribute's value, or null if not exactly one is found
+        */
+        private findSourceAttribute(attribute: string, codeContent: string): string {
+            if (codeContent) {
+                var prefixes = ["//#", "/*#", "//@", "/*@"];
+                var findString: string;
+                var index = -1;
+                var endIndex = -1;
+
+                // Use pound-sign definitions first, but fall back to at-sign
+                // The last instance of the attribute comment takes precedence
+                for (var i = 0; index < 0 && i < prefixes.length; i++) {
+                    findString = "\n" + prefixes[i] + " " + attribute + "=";
+                    index = codeContent.lastIndexOf(findString);
+                }
+
+                if (index >= 0) {
+                    if (index >= 0) {
+                        if (findString.charAt(2) === "*") {
+                            endIndex = codeContent.indexOf("*/", index + findString.length);
+                        } else {
+                            endIndex = codeContent.indexOf("\n", index + findString.length);
+                        }
+
+                        if (endIndex < 0) {
+                            endIndex = codeContent.length;
+                        }
+
+                        return codeContent.substring(index + findString.length, endIndex).trim();
+                    }
+                }
+
+                return null;
+            }
         }
     }
 
