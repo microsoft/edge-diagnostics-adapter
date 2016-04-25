@@ -76,7 +76,7 @@ void WebSocketHandler::OnHttp(websocketpp::connection_hdl hdl)
 			ss << page;
 		}
 	}
-	else if (requestedResource == "/protocol.json")
+	else if (requestedResource == "/json/protocol")
 	{
 		// Load and return the protocol.json file
 		CString protocolJsonFile;
