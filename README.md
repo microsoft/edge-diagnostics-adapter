@@ -14,7 +14,7 @@ Binary is now located in` ./node_modules/edge-diagnostics-adapter/dist/<platform
 ## Usage
 
 ```console
-./<path>/EdgeDiagnosticsAdaptor.exe
+./<path>/EdgeDiagnosticsAdapter.exe
 ```
 
 * `--help` - show available commands
