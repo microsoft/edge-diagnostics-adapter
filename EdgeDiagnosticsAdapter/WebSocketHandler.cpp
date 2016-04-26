@@ -53,7 +53,6 @@ WebSocketHandler::WebSocketHandler(_In_ LPCWSTR rootPath, _In_ HWND adapterhWnd,
 		this->IsServerListening = false;
 		std::wcout << L"Error: Starting websocket handler: " << e.what();
 	}
-
 }
 
 // WebSocket Callbacks

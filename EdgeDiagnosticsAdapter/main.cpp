@@ -14,15 +14,6 @@
 CHandle hChromeProcess;
 namespace po = boost::program_options;
 
-BOOL WINAPI OnClose(DWORD reason)
-{
-	if (hChromeProcess.m_h)
-	{
-		::TerminateProcess(hChromeProcess.m_h, 0);
-	}
-	return TRUE;
-}
-
 CString getPathToCurrentExeContainer()
 {
 	// Get the current path that we are running from
@@ -97,6 +88,54 @@ void setSecurityACLs()
 	{
 		LocalFree((HLOCAL)pNewDACL);
 	}
+}
+
+HRESULT setEdgeForDebugging(bool enable)
+{
+	HRESULT hrResult = E_FAIL;
+
+	CString edgePackageFamilyName;
+	hrResult = Helpers::GetEdgePackageFamilyName(edgePackageFamilyName);
+
+	if (!SUCCEEDED(hrResult))
+	{
+		std::cerr << "Failed to get the full package name of Edge." << std::endl;
+		std::cerr << "HR Code: " << hrResult << std::endl;
+		return hrResult;
+	}
+
+	CComPtr<IPackageDebugSettings> spPackageDebugSettings;
+	hrResult = CoCreateInstance(CLSID_PackageDebugSettings, NULL, CLSCTX_INPROC_SERVER, IID_PPV_ARGS(&spPackageDebugSettings));
+
+	if (!SUCCEEDED(hrResult))
+	{
+		std::cerr << "Failed to CoCreateInstance of CLSID_PackageDebugSettings." << std::endl;
+		std::cerr << "HR Code: " << hrResult << std::endl;
+		return hrResult;
+	}
+
+	if (enable)
+	{
+		hrResult = spPackageDebugSettings->EnableDebugging(edgePackageFamilyName, NULL, NULL);
+	}
+	else
+	{
+		hrResult = spPackageDebugSettings->DisableDebugging(edgePackageFamilyName);
+	}
+
+	return hrResult;
+}
+
+BOOL WINAPI OnClose(DWORD reason)
+{
+	if (hChromeProcess.m_h)
+	{
+		::TerminateProcess(hChromeProcess.m_h, 0);
+	}
+
+	setEdgeForDebugging(false);
+
+	return TRUE;
 }
 
 int wmain(int argc, wchar_t* argv[])
@@ -244,7 +283,11 @@ int wmain(int argc, wchar_t* argv[])
 			port = vm["port"].as<string>();
 		}
 
+		// We don't care if this fails as the developer can set it manually.
 		setSecurityACLs();
+
+		// We don't care if this fails or not as maybe the developer wants to do something that won't hit the PLM. In case errors went to the console.
+		setEdgeForDebugging(true);
 
 		// Load the proxy server
 		EdgeDiagnosticsAdapter proxy(getPathToCurrentExeContainer(), port);
