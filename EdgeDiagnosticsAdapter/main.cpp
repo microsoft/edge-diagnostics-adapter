@@ -9,6 +9,7 @@
 #include <Shellapi.h>
 #include <Shlobj.h>
 #include "Aclapi.h"
+#include <Sddl.h>
 #include "boost/program_options.hpp"
 
 CHandle hChromeProcess;
@@ -49,35 +50,51 @@ void setSecurityACLs()
 	// The check is done on the folder and should be inherited to all objects
 	DWORD dwRes = GetNamedSecurityInfo(fullPath, SE_FILE_OBJECT, DACL_SECURITY_INFORMATION, NULL, NULL, &pOldDACL, NULL, &pSD);
 
-	// Initialize an EXPLICIT_ACCESS structure for the new ACE. 
-	ZeroMemory(&ea, sizeof(EXPLICIT_ACCESS));
-	ea.grfAccessPermissions = GENERIC_READ | GENERIC_EXECUTE;
-	ea.grfAccessMode = SET_ACCESS;
-	ea.grfInheritance = SUB_CONTAINERS_AND_OBJECTS_INHERIT;
-	ea.Trustee.TrusteeForm = TRUSTEE_IS_NAME;
-	ea.Trustee.TrusteeType = TRUSTEE_IS_WELL_KNOWN_GROUP;
-	ea.Trustee.ptstrName = L"ALL APPLICATION PACKAGES";
+	// Get the SID for "ALL APPLICATION PACAKGES" since it is localized
+	PSID pAllAppPackagesSID = NULL;
+	bool bResult = ConvertStringSidToSid(L"S-1-15-2-1", &pAllAppPackagesSID);
 
-	// Create a new ACL that merges the new ACE into the existing DACL.
-	dwRes = SetEntriesInAcl(1, &ea, pOldDACL, &pNewDACL);
-	if (dwRes == ERROR_SUCCESS)
+	if (bResult)
 	{
-		dwRes = SetNamedSecurityInfo(fullPath.GetBuffer(), SE_FILE_OBJECT, si, NULL, NULL, pNewDACL, NULL);
+		// Initialize an EXPLICIT_ACCESS structure for the new ACE. 
+		ZeroMemory(&ea, sizeof(EXPLICIT_ACCESS));
+		ea.grfAccessPermissions = GENERIC_READ | GENERIC_EXECUTE;
+		ea.grfAccessMode = SET_ACCESS;
+		ea.grfInheritance = SUB_CONTAINERS_AND_OBJECTS_INHERIT;
+		ea.Trustee.TrusteeForm = TRUSTEE_IS_SID;;
+		ea.Trustee.TrusteeType = TRUSTEE_IS_WELL_KNOWN_GROUP;
+		ea.Trustee.ptstrName = (LPTSTR)pAllAppPackagesSID;
+
+		// Create a new ACL that merges the new ACE into the existing DACL.
+		dwRes = SetEntriesInAcl(1, &ea, pOldDACL, &pNewDACL);
 		if (dwRes == ERROR_SUCCESS)
 		{
+			dwRes = SetNamedSecurityInfo(fullPath.GetBuffer(), SE_FILE_OBJECT, si, NULL, NULL, pNewDACL, NULL);
+			if (dwRes == ERROR_SUCCESS)
+			{
 
+			}
+			else
+			{
+				// The ACL was not set, this isn't fatal as it only impacts IE in EPM and Edge and the user can set it manually
+				wcout << L"Could not set ACL to allow access to IE EPM or Edge.";
+				wcout << L"\n";
+				wcout << Helpers::GetLastErrorMessage().GetBuffer();
+				wcout << L"\n";
+				wcout << L"You can set the ACL manually by adding Read & Execute permissions for 'All APPLICATION PACAKGES' to each dll.";
+				wcout << L"\n";
+			}
 		}
 	}
-
-	if (dwRes != ERROR_SUCCESS)
+	else
 	{
-		// The ACL was not set, this isn't fatal as it only impacts IE in EPM and Edge and the user can set it manually
-		wcout << L"Could not set ACL to allow access to IE EPM or Edge.";
-		wcout << L"\n";
-		wcout << Helpers::GetLastErrorMessage().GetBuffer();
-		wcout << L"\n";
-		wcout << L"You can set the ACL manually by adding Read & Execute permissions for 'All APPLICATION PACAKGES' to each dll.";
-		wcout << L"\n";
+		std::cerr << "Failed to get the SID for ALL_APP_PACKAGES." << std::endl;
+		std::cerr << "Win32 error code: " << GetLastError() << std::endl;
+	}
+
+	if (pAllAppPackagesSID != NULL)
+	{
+		LocalFree(pAllAppPackagesSID);
 	}
 
 	if (pSD != NULL)
