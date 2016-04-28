@@ -237,3 +237,8 @@ _Pvt_Extensions
 
 # Edge diagnostics adapter
 External/
+
+# Other folders
+out/
+typings/
+Addon/build/

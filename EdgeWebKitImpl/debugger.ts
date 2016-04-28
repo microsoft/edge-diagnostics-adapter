@@ -478,14 +478,14 @@ module EdgeDiagnosticsAdapter {
                 case "toolsDisconnected":
                     this.debuggerResume(BreakResumeAction.Continue);
                     return host.postMessageToEngine("browser", this._isAtBreakpoint, "{\"method\":\"Custom.toolsDisconnected\"}");
-                    this._debugger.disconnect();
-                    this._isEnabled = false;
-                    break;
+                    //this._debugger.disconnect();
+                    //this._isEnabled = false;
+                    //break;
 
                 case "testResetState":
                     this.debuggerResume(BreakResumeAction.Continue);
                     return host.postMessageToEngine("browser", this._isAtBreakpoint, "{\"method\":\"Custom.testResetState\"}");
-                    break;
+                    //break;
             }
         }
 
