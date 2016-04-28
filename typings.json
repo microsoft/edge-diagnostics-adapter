@@ -1,6 +1,6 @@
 {
-  "ambientDependencies": {
-    "node": "registry:dt/node#4.0.0+20160423143914",
-    "ws": "registry:dt/ws#0.0.0+20160317120654"
-  }
+    "ambientDependencies": {
+        "node": "registry:dt/node#4.0.0+20160423143914",
+        "ws": "registry:dt/ws#0.0.0+20160317120654"
+    }
 }

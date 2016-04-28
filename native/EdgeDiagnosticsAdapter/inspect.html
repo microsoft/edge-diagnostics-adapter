@@ -1,0 +1,319 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta http-equiv="X-UA-Compatible" content="IE=Edge" />
+    <title>Inspectable Edge pages</title>
+    <style>
+        html, body {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100%;
+        }
+
+        body {
+            background-color: #FFFFFF;
+            font-family: "Segoe UI Light", "Segoe UI";
+            font-size: small;
+            color: #000000;
+            line-height: 1.1em;
+            overflow: hidden;
+            -ms-user-select: none;
+            user-select: none;
+        }
+
+        #grid {
+            width: 100%;
+            height: 100%;
+            box-sizing: border-box;
+            display: -ms-grid;
+            -ms-grid-columns: 52px 1fr 28px 28px;
+            -ms-grid-rows: 32px 24px 1fr;
+            overflow-y: auto;
+            overflow-x: hidden;
+        }
+
+        #optionsContainer {
+            position: absolute;
+            top: 0;
+            right: 0;
+            padding: 2px;
+            width: 40px;
+        }
+
+        .headerImg {
+            background-position: 0 0;
+            background-size: 56px;
+            background-repeat: no-repeat;
+            cursor: pointer;
+            height: 22px;
+        }
+
+            .headerImg:hover {
+                background-position: -28px 0;
+            }
+
+        #headerTitle {
+            font-size: large;
+            margin-top: 9px;
+            cursor: default;
+            user-select: none;
+            -ms-grid-column: 2;
+            -ms-grid-row: 1;
+            border-bottom: solid 1px grey;
+            padding-bottom: 10px;
+            padding-left: 10px;
+        }
+
+        #targets {
+            -ms-grid-column: 1;
+            -ms-grid-column-span: 4;
+            -ms-grid-row: 3;
+            margin: 5px 3px 0 6px;
+        }
+
+        .target {
+            margin: 10px 4px 10px 4px;
+            display: block;
+            width: 192px;
+            cursor: pointer;
+            position: relative;
+        }
+
+        .preview {
+            height: 108px;
+            width: 192px;
+            background-color: #606060;
+        }
+
+        .title {
+            background-color: #1E1E1E;
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            color: #FFFFFF;
+            padding-left: 2px;
+            height: 20px;
+            width: 190px;
+            transition: height 0.3s ease;
+        }
+
+        .description {
+            float: left;
+            padding-left: 200px;
+            margin-top: -100px;
+            font-weight: bold;
+            font-size: large;
+        }
+
+        .url {
+            float: left;
+            padding-left: 200px;
+            margin-top: -80px;
+        }
+
+        .toggleIcon {
+            display: inline-block;
+            background-repeat: no-repeat;
+            cursor: pointer;
+            width: 9px;
+            height: 15px;
+        }
+
+        .toggleIconOn {
+            background-position-y: 0;
+        }
+
+            .toggleIconOn:hover {
+                background-position-y: -15px;
+            }
+
+        .toggleIconOff {
+            background-position-y: -15px;
+        }
+
+            .toggleIconOff:hover {
+                background-position-y: 0;
+            }
+
+        #remoteFrontendToggle {
+            background-image: url('data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAkAAAAeCAIAAABxIKNkAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAADsMAAA7DAcdvqGQAAAAYdEVYdFNvZnR3YXJlAHBhaW50Lm5ldCA0LjAuNWWFMmUAAAFpSURBVDhPpZFPSwJBFMD3KN48+BnEjyB46iBLl6APUKCgl+hW98QS+7OHAhFiIQuULrpBeAgMWkgILOygu0Tpwiy7azNvPkOz7uiY4skfj5333m/ezC4rlRpk75pslfDGEY/tM7yvktMmkWat5fAdpXSMqWmxlXq//pMh3NM7sHDGtNomyJ1z/SHcPRM2+vgGL5/gm5lj238QfHzRex0IV3NnIhdu2jC0g76PcM0OdPpBk8PdN4LGK0wP44i5BcEQbpk13aqQzjU4qJKdSywf+/XmCd69woe35OIBpHQ6nUgkIpGINCUajSaTyUwmw+uVsJs9z+v1eixxHGfyKlS4er1eq9UQQoVCYTQaCdftdovFouu6qqpqmjYZmzrbtg3D0HVdURSM+edyxzLLsvL5vGmagWAIV6lUWq1W0A3gbjAYlMtl+P+XuGPZgmAIt8yabiXZbDaVSsVisVAoxMpwOByPx2VZzuVyf1qcCLx4obfdAAAAAElFTkSuQmCC');
+        }
+
+        #gearIcon {
+            display: inline-block;
+            margin-left: 2px;
+            width: 16px;
+            height: 16px;
+            background-image: url('data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAADsMAAA7DAcdvqGQAAAAYdEVYdFNvZnR3YXJlAHBhaW50Lm5ldCA0LjAuNWWFMmUAAAEQSURBVDhPldNLSgNBEIDhPoCbCIKEbF25zQEEr+AFPJDxcYcQQcEjiAgS17px4UYQBdFFVorP/w/dQ/ekTUjBB6mamuqemU6YE8f4jU4tLIoVHGB9moVwjTTg1gLRwyHsLcLCJWx+xjZeYq537OA15vYWQ1w5Neu7ldccoQm3/YRaY80bfJwitvCFvPEzymvaRRNDXOAe+QDr3cjf+YAf2H+G4kLiqt6Ywt+1nahaXGqA2zvHHT6QLsx7BD/rDU7QxCYmyBtdtbayZ6KIVfhS2o3/8UAVn3GAdoNvOq+57Tz3SDeRH2XfxQYeYy6Pdx8PMZ85yoaFPXSmWQhXSAPGFog17GPm5lqMkAb4165ECH8ZMZt/6o/hugAAAABJRU5ErkJggg==');
+        }
+    </style>
+    <script>
+        var chooser = {
+            remoteFrontend: false,
+
+            animateTitleStart: function (titleNode) {
+                titleNode.style.height = "60px";
+                titleNode.style.whiteSpace = "normal"
+            },
+
+            animateTitleEnd: function (titleNode) {
+                titleNode.style.height = "20px";
+                titleNode.style.whiteSpace = "nowrap";
+            },
+
+            createShortenedUrlText: function (url) {
+                var shortenedText = url;
+
+                // Remove a query string if any
+                var indexOfHash = shortenedText.indexOf("#");
+                var indexOfQuestionMark = shortenedText.indexOf("?");
+                var index = -1;
+                if (indexOfHash > -1 && indexOfQuestionMark > -1) {
+                    index = Math.min(indexOfHash, indexOfQuestionMark);
+                } else if (indexOfHash > -1) {
+                    index = indexOfHash;
+                } else if (indexOfQuestionMark > -1) {
+                    index = indexOfQuestionMark;
+                }
+
+                if (index > -1) {
+                    shortenedText = shortenedText.substring(0, index);
+                }
+
+                index = shortenedText.lastIndexOf("/");
+
+                // While the last character is '/', truncate it and find the next / or the start of the string
+                while (index !== -1 && index === (shortenedText.length - 1)) {
+                    // Remove last '/'
+                    shortenedText = shortenedText.substring(0, shortenedText.length - 1);
+                    index = shortenedText.lastIndexOf("/");
+                }
+
+                if (index > -1) {
+                    shortenedText = shortenedText.substring(index + 1);
+                }
+
+                return shortenedText;
+            },
+
+            selectTarget: function (id) {
+                var websocket = window.pages[id].webSocketDebuggerUrl;
+                var link = websocket.substring(5);
+                var params = "";
+                if (chooser.remoteFrontend) {
+                    params += "&remoteFrontend=true";
+                }
+                window.location.href = "http://localhost:9223/devtools/inspector.html?ws=" + link + params;
+            },
+
+            addTarget: function (id, pageInfo) {
+                if (!pageInfo.title) {
+                    pageInfo.title = chooser.createShortenedUrlText(pageInfo.url);
+                }
+
+                if (pageInfo.screenshot) {
+                    pageInfo.screenshot = "data:image/png;base64," + pageInfo.screenshot;
+                }
+
+                var targetEl = document.createElement("div");
+                targetEl.className = "target"
+                targetEl.setAttribute("data-id", id);
+                targetEl.addEventListener("click", function targetClick(e) {
+                    var id = e.currentTarget.getAttribute("data-id");
+                    chooser.selectTarget(id);
+                });
+                targetEl.addEventListener("mouseover", function titleEl_mouseover(e) {
+                    var nodeList = e.currentTarget.querySelectorAll(".title");
+                    if (nodeList && nodeList[0]) {
+                        chooser.animateTitleStart(nodeList[0]);;
+                    }
+                });
+                targetEl.addEventListener("mouseout", function titleEl_mouseover(e) {
+                    var nodeList = e.currentTarget.querySelectorAll(".title");
+                    if (nodeList && nodeList[0]) {
+                        chooser.animateTitleEnd(nodeList[0]);
+                    }
+                });
+
+                var imgEl = document.createElement("div");
+                imgEl.className = "preview";
+                imgEl.style.backgroundRepeat = "no-repeat";
+
+                var titleEl = document.createElement("div");
+                titleEl.className = "title cutText";
+                titleEl.appendChild(document.createTextNode(pageInfo.title));
+
+                var descEl = document.createElement("div");
+                descEl.className = "description cutText";
+                descEl.appendChild(document.createTextNode(pageInfo.description));
+
+                var urlEl = document.createElement("div");
+                urlEl.className = "url cutText";
+                urlEl.appendChild(document.createTextNode(pageInfo.url));
+
+                targetEl.appendChild(imgEl);
+                targetEl.appendChild(titleEl);
+                targetEl.appendChild(descEl);
+                targetEl.appendChild(urlEl);
+
+                var targetsEl = document.getElementById("targets");
+                targetsEl.appendChild(targetEl);
+            }
+        };
+
+
+        window.addEventListener("DOMContentLoaded", function () {
+
+            var xhr = new XMLHttpRequest();
+            xhr.onreadystatechange = function () {
+                if (xhr.readyState == 4) {
+                    window.pages = JSON.parse(xhr.responseText);
+                    for (var i = 0; i < window.pages.length; i++) {
+                        var page = window.pages[i];
+                        chooser.addTarget(i, page);
+                    }
+                }
+            }
+            xhr.open('GET', 'json/list', true);
+            xhr.send(null);
+
+            function setRemoteFrontendToggleTo(toggleToState) {
+                window.localStorage.setItem("remoteFrontend", toggleToState);
+                if (toggleToState) {
+                    remoteFrontendToggle.classList.remove("toggleIconOff");
+                    remoteFrontendToggle.classList.add("toggleIconOn");
+                    chooser.remoteFrontend = true;
+                    remoteFrontendToggle.setAttribute("title", "Toggle remote front end. Currently enabled.");
+                } else {
+                    remoteFrontendToggle.classList.remove("toggleIconOn");
+                    remoteFrontendToggle.classList.add("toggleIconOff");
+                    chooser.remoteFrontend = false;
+                    remoteFrontendToggle.setAttribute("title", "Toggle remote front end. Currently disabled.");
+                }
+            }
+
+            var remoteFrontendToggle = document.querySelector("#remoteFrontendToggle")
+            remoteFrontendToggle.addEventListener("click", function () {
+                setRemoteFrontendToggleTo(!chooser.remoteFrontend);
+            });
+
+            if (JSON.parse(window.localStorage.getItem("remoteFrontend"))) {
+                setRemoteFrontendToggleTo(true);
+            } else {
+                setRemoteFrontendToggleTo(false);
+            }
+        });
+    </script>
+</head>
+<body>
+    <div id="grid">
+        <div id="headerTitle">Choose a target to debug</div>
+        <div id="optionsContainer">
+            <div id="remoteFrontendToggle" class="toggleIcon"></div>
+            <div id="gearIcon"></div>
+        </div>
+        <div id="targets"></div>
+    </div>
+</body>
+</html>
