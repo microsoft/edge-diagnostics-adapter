@@ -27,6 +27,11 @@ var lintSources = [
     'test'
 ].map(function(tsFolder) { return tsFolder + '/**/*.ts'; });
 
+var deploySources = [
+    'src/**/*.html',
+    'src/**/*.css'
+];
+
 var nativeSources = [
     'native/Common',
     'native/DebuggerCore',
@@ -42,13 +47,19 @@ var projectConfig = {
     moduleResolution: "node"
 };
 
-gulp.task('build', function () {
+gulp.task('buildtypescript', function () {
 	return gulp.src(sources, { base: '.' }) 
         .pipe(sourcemaps.init()) 
         .pipe(ts(projectConfig)).js 
         .pipe(sourcemaps.write('.', { includeContent: false, sourceRoot: 'file:///' + __dirname })) 
         .pipe(gulp.dest('out'));
 });
+
+gulp.task('buildscript', ['buildtypescript'], function() {
+    return gulp.src(deploySources, { base: '.' })
+            .pipe(gulp.dest('out'));
+});
+
 
 function getNativeBuildOptions() {
     const target = (argv.rebuild ? 'Rebuild' : 'Build');
@@ -102,11 +113,11 @@ gulp.task('buildnative', ['buildnativeaddon'], function() {
 
 gulp.task('default', ['buildnative']);
 
-gulp.task('buildall', ['build', 'buildnative'])
+gulp.task('buildall', ['buildscript', 'buildnative'])
 
-gulp.task('watch', ['build'], function() {
+gulp.task('watch', ['buildscript'], function() {
     log('Watching build sources...');
-    return gulp.watch(sources, ['build']);
+    return gulp.watch(sources, ['buildscript']);
 });
 
 gulp.task('tslint', function() { 

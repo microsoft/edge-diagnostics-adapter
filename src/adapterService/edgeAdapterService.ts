@@ -45,6 +45,7 @@ export module EdgeAdapter {
             this._chromeToolsPort = chromeToolsPort;
 
             edgeAdapter.initialize(__dirname, (a, b) => this.onEdgeMessage(a, b), (a) => this.onLogMessage(a));
+            edgeAdapter.setSecurityACLs(__dirname + "\\..\\..\\lib\\");
 
             this._hs = http.createServer((a, b) => this.onServerRequest(a, b));
             this._wss = new WebSocketServer({ server: this._hs });
@@ -78,15 +79,7 @@ export module EdgeAdapter {
             } else if (url === "") {
                 // Respond with attach page
                 response.writeHead(200, { "Content-Type": "text/html" });
-                response.write('<!DOCTYPE "html">');
-                response.write("<html>");
-                response.write("<head>");
-                response.write("<title>Edge Adapter</title>");
-                response.write("</head>");
-                response.write("<body>");
-                response.write("Hello World!");
-                response.write("</body>");
-                response.write("</html>");
+                response.write(fs.readFileSync(__dirname + '/../chromeProtocol/inspect.html', 'utf8'));
                 response.end();
             } else {
                 // Not found
@@ -133,8 +126,29 @@ export module EdgeAdapter {
             }
 
             if (succeeded) {
+                // Forward messages to the proxy
                 ws.on('message', (msg) => {
+                    this.log(msg);
                     edgeAdapter.forwardTo(instanceId, msg);
+                });
+                
+                const removeSocket = (instanceId: edgeAdapter.EdgeInstanceId) => {
+                    const sockets = this._edgeToWSMap.get(instanceId);
+                    const index = sockets.indexOf(ws);
+                    if (index > -1) {
+                        sockets.splice(index, 1);
+                    }
+                    this._edgeToWSMap.set(instanceId, sockets);
+                };
+                
+                // Remove socket on close or error
+                ws.on('close', () => {
+                    this.log("closed");
+                    removeSocket(instanceId);
+                });
+                ws.on('error', () => {
+                    this.log("error");
+                    removeSocket(instanceId);
                 });
             } else {
                 // No matching Edge instance

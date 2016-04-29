@@ -8,6 +8,10 @@
 #include <VersionHelpers.h>
 #include <comdef.h>
 #include <Strsafe.h>
+#include <Shellapi.h>
+#include <Shlobj.h>
+#include <Aclapi.h>
+#include <Sddl.h>
 
 using v8::FunctionTemplate;
 
@@ -15,7 +19,7 @@ bool isInitialized = false;
 bool isMessageReceiverCreated = false;
 Nan::Persistent<Function> messageCallbackHandle;
 Nan::Persistent<Function> logCallbackHandle;
-CString rootPath;
+CString m_rootPath;
 HWND m_proxyHwnd;
 
 NAN_MODULE_INIT(InitAll) 
@@ -24,6 +28,8 @@ NAN_MODULE_INIT(InitAll)
         Nan::GetFunction(Nan::New<FunctionTemplate>(initialize)).ToLocalChecked());
     Nan::Set(target, Nan::New("getEdgeInstances").ToLocalChecked(),
         Nan::GetFunction(Nan::New<FunctionTemplate>(getEdgeInstances)).ToLocalChecked());
+    Nan::Set(target, Nan::New("setSecurityACLs").ToLocalChecked(),
+        Nan::GetFunction(Nan::New<FunctionTemplate>(setSecurityACLs)).ToLocalChecked());        
     Nan::Set(target, Nan::New("connectTo").ToLocalChecked(),
         Nan::GetFunction(Nan::New<FunctionTemplate>(connectTo)).ToLocalChecked());
     Nan::Set(target, Nan::New("injectScriptTo").ToLocalChecked(),
@@ -90,7 +96,7 @@ void SendMessageToInstance(_In_ HWND instanceHwnd, _In_ CString& message)
 
 NAN_METHOD(initialize) 
 {
-    ::MessageBox(nullptr, L"Attach", L"Attach", 0);
+    //::MessageBox(nullptr, L"Attach", L"Attach", 0);
     
     if (isInitialized)
     {
@@ -105,7 +111,7 @@ NAN_METHOD(initialize)
     }
 
     String::Utf8Value path(info[0]->ToString());
-    rootPath = (char*)*path;
+    m_rootPath = (char*)*path;
     messageCallbackHandle.Reset(info[1].As<Function>());
     logCallbackHandle.Reset(info[2].As<Function>());
 
@@ -210,6 +216,82 @@ NAN_METHOD(getEdgeInstances)
     info.GetReturnValue().Set(arr);
 }
 
+NAN_METHOD(setSecurityACLs)
+{
+    EnsureInitialized();
+    if (info.Length() < 1 || !info[0]->IsString())
+    {
+        Nan::ThrowTypeError("Incorrect arguments - setSecurityACLs(filePath: string): boolean");
+        return;
+    }
+
+    info.GetReturnValue().Set(false);
+
+    String::Utf8Value path(info[0]->ToString());
+    CString fullPath((char*)*path);
+    
+	// Check to make sure that the dll has the ACLs to load in an appcontainer
+	// We're doing this here as the adapter has no setup script and should be xcopy deployable/removeable
+	PACL pOldDACL = NULL, pNewDACL = NULL;
+	PSECURITY_DESCRIPTOR pSD = NULL;
+	EXPLICIT_ACCESS ea;
+	SECURITY_INFORMATION si = DACL_SECURITY_INFORMATION;
+
+	// The check is done on the folder and should be inherited to all objects
+	DWORD dwRes = GetNamedSecurityInfo(fullPath, SE_FILE_OBJECT, DACL_SECURITY_INFORMATION, NULL, NULL, &pOldDACL, NULL, &pSD);
+
+	// Get the SID for "ALL APPLICATION PACAKGES" since it is localized
+	PSID pAllAppPackagesSID = NULL;
+	bool bResult = ConvertStringSidToSid(L"S-1-15-2-1", &pAllAppPackagesSID);
+
+	if (bResult)
+	{
+		// Initialize an EXPLICIT_ACCESS structure for the new ACE. 
+		ZeroMemory(&ea, sizeof(EXPLICIT_ACCESS));
+		ea.grfAccessPermissions = GENERIC_READ | GENERIC_EXECUTE;
+		ea.grfAccessMode = SET_ACCESS;
+		ea.grfInheritance = SUB_CONTAINERS_AND_OBJECTS_INHERIT;
+		ea.Trustee.TrusteeForm = TRUSTEE_IS_SID;;
+		ea.Trustee.TrusteeType = TRUSTEE_IS_WELL_KNOWN_GROUP;
+		ea.Trustee.ptstrName = (LPTSTR)pAllAppPackagesSID;
+
+		// Create a new ACL that merges the new ACE into the existing DACL.
+		dwRes = SetEntriesInAcl(1, &ea, pOldDACL, &pNewDACL);
+		if (dwRes == ERROR_SUCCESS)
+		{
+			dwRes = SetNamedSecurityInfo(fullPath.GetBuffer(), SE_FILE_OBJECT, si, NULL, NULL, pNewDACL, NULL);
+			if (dwRes == ERROR_SUCCESS)
+			{
+                info.GetReturnValue().Set(true);
+			}
+			else
+			{
+				// The ACL was not set, this isn't fatal as it only impacts IE in EPM and Edge and the user can set it manually
+                Log("ERROR: Could not set ACL to allow access to Edge.\nYou can set the ACL manually by adding Read & Execute permissions for 'All APPLICATION PACAKGES' to each dll.");
+			}
+		}
+	}
+	else
+	{
+        Log("ERROR: Failed to get the SID for ALL_APP_PACKAGES.");
+        Log("ERROR: Win32 error code: " + GetLastError());
+	}
+
+	if (pAllAppPackagesSID != NULL)
+	{
+		::LocalFree(pAllAppPackagesSID);
+	}
+
+	if (pSD != NULL)
+	{
+		::LocalFree((HLOCAL)pSD);
+	}
+	if (pNewDACL != NULL)
+	{
+		::LocalFree((HLOCAL)pNewDACL);
+	}
+}
+
 NAN_METHOD(connectTo)
 {
     EnsureInitialized();
@@ -237,8 +319,8 @@ NAN_METHOD(connectTo)
         ::IsWow64Process(GetCurrentProcess(), &isWoWTab);
         bool is64BitTab = is64BitOS && !isWoWTab;
     
-        CString path(rootPath);
-        path.Append(L"\\..\\..\\Output\\Published\\Release\\");
+        CString path(m_rootPath);
+        path.Append(L"\\..\\..\\lib\\");
         if (is64BitTab)
 		{
 			path.Append(L"Proxy64.dll");
@@ -256,11 +338,11 @@ NAN_METHOD(connectTo)
         }
 		else if (hr == ::HRESULT_FROM_WIN32(ERROR_MOD_NOT_FOUND) && is64BitTab) 
         {
-			Log("ERROR: Module could not be found. Ensure Proxy64.dll is in the same folder as IEDiagnosticsAdaptor.exe");
+			Log("ERROR: Module could not be found. Ensure Proxy64.dll exists in the out\\lib\\ folder");
 		}
 		else if (hr == ::HRESULT_FROM_WIN32(ERROR_MOD_NOT_FOUND) && !is64BitTab) 
         {
-			Log("ERROR: Module could not be found. Ensure Proxy.dll is in the same folder as IEDiagnosticsAdaptor.exe");
+			Log("ERROR: Module could not be found. Ensure Proxy.dll exists in the out\\lib\\ folder");
 		}
 		else if (hr != S_OK)
 		{
