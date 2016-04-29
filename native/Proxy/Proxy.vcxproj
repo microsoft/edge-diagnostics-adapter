@@ -87,8 +87,8 @@
     <TargetName>$(ProjectName)64</TargetName>
   </PropertyGroup>
   <PropertyGroup>
-    <OutDir>$(SolutionDir)Output\$(Configuration)\</OutDir>
-    <IntDir>$(SolutionDir)Output\Intermediate\$(ProjectName)\$(Configuration)\$(Platform)\</IntDir>
+    <OutDir>..\..\out\native\$(Configuration)\$(Platform)\</OutDir>
+    <IntDir>..\..\out\native\intermediate\$(Configuration)\$(Platform)\$(ProjectName)\</IntDir>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
@@ -97,21 +97,21 @@
       <Optimization>Disabled</Optimization>
       <PreprocessorDefinitions>Win32;_DEBUG;_WINDOWS;_USRDLL;PROXY_EXPORTS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <SDLCheck>true</SDLCheck>
-      <AdditionalIncludeDirectories>..\Common\;..\Output\Published\$(Configuration)\$(Platform)\;</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>..\Common\;$(OutDir);</AdditionalIncludeDirectories>
       <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <ModuleDefinitionFile>Proxy.def</ModuleDefinitionFile>
-      <AdditionalLibraryDirectories>..\Output\Published\$(Configuration)\;</AdditionalLibraryDirectories>
+      <AdditionalLibraryDirectories>$(OutDir);</AdditionalLibraryDirectories>
       <AdditionalDependencies>chakrart.lib;version.lib;Common.lib;DebuggerCore.lib</AdditionalDependencies>
     </Link>
     <Midl>
-      <OutputDirectory>..\Output\Published\$(Configuration)\$(Platform)\</OutputDirectory>
+      <OutputDirectory>$(OutDir)</OutputDirectory>
     </Midl>
     <ResourceCompile>
-      <AdditionalIncludeDirectories>..\Output\Intermediate\$(ProjectName)\$(Configuration)\$(Platform)\;</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(OutDir);</AdditionalIncludeDirectories>
     </ResourceCompile>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
@@ -121,22 +121,21 @@
       <Optimization>Disabled</Optimization>
       <PreprocessorDefinitions>Win32;_DEBUG;_WINDOWS;_USRDLL;PROXY_EXPORTS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <SDLCheck>true</SDLCheck>
-      <AdditionalIncludeDirectories>..\Common\;..\Output\Published\$(Configuration)\$(Platform)\;</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>..\Common\;$(OutDir);</AdditionalIncludeDirectories>
       <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <ModuleDefinitionFile>Proxy.def</ModuleDefinitionFile>
-      <AdditionalLibraryDirectories>..\Output\Published\$(Configuration)\;</AdditionalLibraryDirectories>
+      <AdditionalLibraryDirectories>$(OutDir);</AdditionalLibraryDirectories>
       <AdditionalDependencies>chakrart.lib;version.lib;Common.lib;DebuggerCore.lib</AdditionalDependencies>
     </Link>
     <Midl>
-      <OutputDirectory>..\Output\Published\$(Configuration)\$(Platform)\</OutputDirectory>
-      <TypeLibraryName>$(ProjectName).tlb</TypeLibraryName>
+      <OutputDirectory>$(OutDir)</OutputDirectory>
     </Midl>
     <ResourceCompile>
-      <AdditionalIncludeDirectories>..\Output\Intermediate\$(ProjectName)\$(Configuration)\$(Platform)\;</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(OutDir);</AdditionalIncludeDirectories>
     </ResourceCompile>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
@@ -148,7 +147,7 @@
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <PreprocessorDefinitions>Win32;NDEBUG;_WINDOWS;_USRDLL;PROXY_EXPORTS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <SDLCheck>true</SDLCheck>
-      <AdditionalIncludeDirectories>..\Common\;..\Output\Published\$(Configuration)\$(Platform)\;</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>..\Common\;$(OutDir);</AdditionalIncludeDirectories>
       <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
     </ClCompile>
     <Link>
@@ -157,14 +156,14 @@
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
       <ModuleDefinitionFile>Proxy.def</ModuleDefinitionFile>
-      <AdditionalLibraryDirectories>..\Output\Published\$(Configuration)\;</AdditionalLibraryDirectories>
+      <AdditionalLibraryDirectories>$(OutDir);</AdditionalLibraryDirectories>
       <AdditionalDependencies>chakrart.lib;version.lib;Common.lib;DebuggerCore.lib</AdditionalDependencies>
     </Link>
     <Midl>
-      <OutputDirectory>..\Output\Published\$(Configuration)\$(Platform)\</OutputDirectory>
+      <OutputDirectory>$(OutDir)</OutputDirectory>
     </Midl>
     <ResourceCompile>
-      <AdditionalIncludeDirectories>..\Output\Intermediate\$(ProjectName)\$(Configuration)\$(Platform)\;</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(OutDir);</AdditionalIncludeDirectories>
     </ResourceCompile>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
@@ -176,7 +175,7 @@
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <PreprocessorDefinitions>Win32;NDEBUG;_WINDOWS;_USRDLL;PROXY_EXPORTS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <SDLCheck>true</SDLCheck>
-      <AdditionalIncludeDirectories>..\Common\;..\Output\Published\$(Configuration)\$(Platform)\;</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>..\Common\;$(OutDir);</AdditionalIncludeDirectories>
       <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
     </ClCompile>
     <Link>
@@ -185,15 +184,14 @@
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
       <ModuleDefinitionFile>Proxy.def</ModuleDefinitionFile>
-      <AdditionalLibraryDirectories>..\Output\Published\$(Configuration)\;</AdditionalLibraryDirectories>
+      <AdditionalLibraryDirectories>$(OutDir);</AdditionalLibraryDirectories>
       <AdditionalDependencies>chakrart.lib;version.lib;Common.lib;DebuggerCore.lib</AdditionalDependencies>
     </Link>
     <Midl>
-      <OutputDirectory>..\Output\Published\$(Configuration)\$(Platform)\</OutputDirectory>
-      <TypeLibraryName>$(ProjectName).tlb</TypeLibraryName>
+      <OutputDirectory>$(OutDir)</OutputDirectory>
     </Midl>
     <ResourceCompile>
-      <AdditionalIncludeDirectories>..\Output\Intermediate\$(ProjectName)\$(Configuration)\$(Platform)\;</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(OutDir);</AdditionalIncludeDirectories>
     </ResourceCompile>
   </ItemDefinitionGroup>
   <ItemGroup>
@@ -209,10 +207,10 @@
     <ClInclude Include="WebSocketClientHost.h" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="..\Output\Published\$(Configuration)\$(Platform)\Proxy_i.c">
+    <ClCompile Include="$(OutDir)\Proxy_i.c">
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
     </ClCompile>
-    <ClCompile Include="..\Output\Published\$(Configuration)\$(Platform)\DebuggerCore_i.c">
+    <ClCompile Include="$(OutDir)\DebuggerCore_i.c">
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
     </ClCompile>
     <ClCompile Include="BrowserHost.cpp" />
@@ -230,14 +228,21 @@
     <None Include="Proxy.def" />
   </ItemGroup>
   <ItemGroup>
-    <Midl Include="Proxy.idl" />
+    <Midl Include="Proxy.idl">
+      <TypeLibraryName>$(ProjectName).tlb</TypeLibraryName>
+    </Midl>
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="Resource.rc">
-      <AdditionalIncludeDirectories>..\Output\Published\$(Configuration)\$(Platform)\;$(IntDir)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(OutDir);$(IntDir)</AdditionalIncludeDirectories>
     </ResourceCompile>
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
   </ImportGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\DebuggerCore\DebuggerCore.vcxproj">
+      <Project>{A9505C3C-5EB9-4989-8028-122E8A5F4B46}</Project>
+    </ProjectReference>
+  </ItemGroup>
 </Project>

@@ -2,6 +2,24 @@
 // Copyright (C) Microsoft. All rights reserved.
 //
 
+// Override require to pick the correct addon architecture at runtime
+(function() {
+    var originalReq = require;
+    require = <any>function(path: string) {
+        if (path !== "../../lib/Addon.node") {
+            return originalReq(path);
+        } else {
+            let mod;
+            try {
+                mod = originalReq(path);
+            } catch (ex) {
+                mod = originalReq("../../lib/Addon64.node");
+            }
+            return mod;
+        }
+    }
+})();
+
 import {IChromeInstance} from '../../lib/EdgeAdapterInterfaces.d.ts'
 import * as edgeAdapter from '../../lib/Addon.node';
 import * as http from 'http';

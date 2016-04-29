@@ -69,8 +69,8 @@
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
   </ImportGroup>
   <PropertyGroup>
-    <OutDir>..\Output\Published\$(Configuration)\</OutDir>
-    <IntDir>$(SolutionDir)Output\Intermediate\$(ProjectName)\$(Configuration)\$(Platform)\</IntDir>
+    <OutDir>..\..\out\native\$(Configuration)\$(Platform)\</OutDir>
+    <IntDir>..\..\out\native\intermediate\$(Configuration)\$(Platform)\$(ProjectName)\</IntDir>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
@@ -79,7 +79,7 @@
       <Optimization>Disabled</Optimization>
       <PreprocessorDefinitions>WIN32;_DEBUG;_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <SDLCheck>true</SDLCheck>
-      <AdditionalIncludeDirectories>..\Output\Published\$(Configuration)\$(Platform)\</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(OutDir)</AdditionalIncludeDirectories>
       <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
     </ClCompile>
     <Link>
@@ -87,7 +87,7 @@
       <GenerateDebugInformation>true</GenerateDebugInformation>
     </Link>
     <Midl>
-      <OutputDirectory>..\Output\Published\$(Configuration)\$(Platform)\</OutputDirectory>
+      <OutputDirectory>$(OurDir)</OutputDirectory>
     </Midl>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
@@ -97,7 +97,7 @@
       <Optimization>Disabled</Optimization>
       <PreprocessorDefinitions>WIN32;_DEBUG;_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <SDLCheck>true</SDLCheck>
-      <AdditionalIncludeDirectories>..\Output\Published\$(Configuration)\$(Platform)\</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(OutDir)\$(Configuration)\$(Platform)\</AdditionalIncludeDirectories>
       <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
     </ClCompile>
     <Link>
@@ -105,7 +105,7 @@
       <GenerateDebugInformation>true</GenerateDebugInformation>
     </Link>
     <Midl>
-      <OutputDirectory>..\Output\Published\$(Configuration)\$(Platform)\</OutputDirectory>
+      <OutputDirectory>$(OutDir)</OutputDirectory>
     </Midl>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
@@ -117,7 +117,7 @@
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <PreprocessorDefinitions>WIN32;NDEBUG;_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <SDLCheck>true</SDLCheck>
-      <AdditionalIncludeDirectories>..\Output\Published\$(Configuration)\$(Platform)\;</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(OutDir);</AdditionalIncludeDirectories>
       <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
     </ClCompile>
     <Link>
@@ -127,7 +127,7 @@
       <OptimizeReferences>true</OptimizeReferences>
     </Link>
     <Midl>
-      <OutputDirectory>..\Output\Published\$(Configuration)\$(Platform)\</OutputDirectory>
+      <OutputDirectory>$(OutDir)</OutputDirectory>
     </Midl>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
@@ -139,7 +139,7 @@
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <PreprocessorDefinitions>WIN32;NDEBUG;_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <SDLCheck>true</SDLCheck>
-      <AdditionalIncludeDirectories>..\Output\Published\$(Configuration)\$(Platform)\;</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(OutDir);</AdditionalIncludeDirectories>
       <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
     </ClCompile>
     <Link>
@@ -149,7 +149,7 @@
       <OptimizeReferences>true</OptimizeReferences>
     </Link>
     <Midl>
-      <OutputDirectory>..\Output\Published\$(Configuration)\$(Platform)\</OutputDirectory>
+      <OutputDirectory>$(OutDir)</OutputDirectory>
     </Midl>
   </ItemDefinitionGroup>
   <ItemGroup>
@@ -198,4 +198,9 @@
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
   </ImportGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\Common\Common.vcxproj">
+      <Project>{DDABCB76-8AAF-454C-86D5-0E13EEA93667}</Project>
+    </ProjectReference>
+  </ItemGroup>
 </Project>
