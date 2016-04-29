@@ -445,7 +445,8 @@ namespace Helpers
 		UINT32 packageNamesBufferLength = 0;
 		result = FindPackagesByPackageFamily(edgeFamilyName, PACKAGE_FILTER_HEAD | PACKAGE_INFORMATION_BASIC, &packageCount, nullptr, &packageNamesBufferLength, nullptr, nullptr);
 
-		if (result != ERROR_SUCCESS)
+		// The first time we call the API we are getting the length of the buffer which also returns the error ERROR_INSUFFICIENT_BUFFER
+		if (result != ERROR_SUCCESS && result != ERROR_INSUFFICIENT_BUFFER)
 		{
 			return E_FAIL;
 		}
