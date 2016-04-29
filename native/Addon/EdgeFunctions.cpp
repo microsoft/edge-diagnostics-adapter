@@ -29,7 +29,11 @@ NAN_MODULE_INIT(InitAll)
     Nan::Set(target, Nan::New("getEdgeInstances").ToLocalChecked(),
         Nan::GetFunction(Nan::New<FunctionTemplate>(getEdgeInstances)).ToLocalChecked());
     Nan::Set(target, Nan::New("setSecurityACLs").ToLocalChecked(),
-        Nan::GetFunction(Nan::New<FunctionTemplate>(setSecurityACLs)).ToLocalChecked());        
+        Nan::GetFunction(Nan::New<FunctionTemplate>(setSecurityACLs)).ToLocalChecked());
+    Nan::Set(target, Nan::New("openEdge").ToLocalChecked(),
+        Nan::GetFunction(Nan::New<FunctionTemplate>(openEdge)).ToLocalChecked());
+    Nan::Set(target, Nan::New("killAll").ToLocalChecked(),
+        Nan::GetFunction(Nan::New<FunctionTemplate>(killAll)).ToLocalChecked());
     Nan::Set(target, Nan::New("connectTo").ToLocalChecked(),
         Nan::GetFunction(Nan::New<FunctionTemplate>(connectTo)).ToLocalChecked());
     Nan::Set(target, Nan::New("injectScriptTo").ToLocalChecked(),
@@ -290,6 +294,61 @@ NAN_METHOD(setSecurityACLs)
 	{
 		::LocalFree((HLOCAL)pNewDACL);
 	}
+}
+
+NAN_METHOD(openEdge)
+{
+    EnsureInitialized();
+    if (info.Length() < 1 || !info[0]->IsString())
+    {
+        Nan::ThrowTypeError("Incorrect arguments - openEdge(url: string): boolean");
+        return;
+    }
+    
+    info.GetReturnValue().Set(false);
+    
+    String::Utf8Value openUrl(info[0]->ToString());
+    CString url((char*)*openUrl);
+    
+    if (url.GetLength() == 0)
+    {
+        url = L"https://www.bing.com";
+    }
+
+    HRESULT hr = Helpers::OpenUrlInMicrosoftEdge(url);
+    if (hr == S_OK)
+    {
+        info.GetReturnValue().Set(true);
+    }
+    else
+    {
+        Log("ERROR: Failed to launch Microsoft Edge");
+    }
+}
+
+NAN_METHOD(killAll)
+{
+    EnsureInitialized();
+    if (info.Length() < 1 || !info[0]->IsString())
+    {
+        Nan::ThrowTypeError("Incorrect arguments - killAll(exeName: string): boolean");
+        return;
+    }
+    
+    info.GetReturnValue().Set(false);
+    
+    String::Utf8Value exeName(info[0]->ToString());
+    CString name((char*)*exeName);
+    
+    HRESULT hr = Helpers::KillAllProcessByExe(name);
+    if (hr == S_OK)
+    {
+        info.GetReturnValue().Set(true);
+    }
+    else
+    {
+        Log("ERROR: Failed to terminate processes");
+    }
 }
 
 NAN_METHOD(connectTo)
