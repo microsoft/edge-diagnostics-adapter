@@ -21,6 +21,7 @@ Nan::Persistent<Function> messageCallbackHandle;
 Nan::Persistent<Function> logCallbackHandle;
 CString m_rootPath;
 HWND m_proxyHwnd;
+CHandle m_hChromeProcess;
 
 NAN_MODULE_INIT(InitAll) 
 {
@@ -34,6 +35,8 @@ NAN_MODULE_INIT(InitAll)
         Nan::GetFunction(Nan::New<FunctionTemplate>(openEdge)).ToLocalChecked());
     Nan::Set(target, Nan::New("killAll").ToLocalChecked(),
         Nan::GetFunction(Nan::New<FunctionTemplate>(killAll)).ToLocalChecked());
+    Nan::Set(target, Nan::New("serveChromeDevTools").ToLocalChecked(),
+        Nan::GetFunction(Nan::New<FunctionTemplate>(serveChromeDevTools)).ToLocalChecked());
     Nan::Set(target, Nan::New("connectTo").ToLocalChecked(),
         Nan::GetFunction(Nan::New<FunctionTemplate>(connectTo)).ToLocalChecked());
     Nan::Set(target, Nan::New("injectScriptTo").ToLocalChecked(),
@@ -348,6 +351,88 @@ NAN_METHOD(killAll)
     else
     {
         Log("ERROR: Failed to terminate processes");
+    }
+}
+
+NAN_METHOD(serveChromeDevTools)
+{
+    EnsureInitialized();
+    if (info.Length() < 1 || !info[0]->IsNumber())
+    {
+        Nan::ThrowTypeError("Incorrect arguments - serveChromeDevTools(port: number): boolean");
+        return;
+    }
+    
+    info.GetReturnValue().Set(false);
+    
+    int port = (info[0]->NumberValue());
+    
+    // Find the chrome install location via the registry
+    CString chromePath;
+    
+    // First see if we can find where Chrome is installed from the registry. This will only succeed if Chrome is installed for all users
+    CString keyPath = L"SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\App Paths\\chrome.exe";
+    CRegKey regKey;
+    if (regKey.Open(HKEY_LOCAL_MACHINE, keyPath, KEY_READ) == ERROR_SUCCESS)
+    {
+        ULONG bufferSize = MAX_PATH;
+        CString path;
+        LRESULT result = regKey.QueryStringValue(nullptr, path.GetBufferSetLength(bufferSize), &bufferSize);
+        path.ReleaseBufferSetLength(bufferSize);
+        if (result == ERROR_SUCCESS)
+        {
+            chromePath = path;
+        }
+    }
+
+    if (chromePath.GetLength() == 0)
+    {
+        // If Chrome is only installed for the current user, look in \AppData\Local\Google\Chrome\Application\ for Chrome.exe
+        CString appPath;
+        ::SHGetFolderPath(NULL, CSIDL_LOCAL_APPDATA, NULL, SHGFP_TYPE_CURRENT, appPath.GetBuffer(MAX_PATH + 1));
+        appPath.ReleaseBuffer();
+        chromePath = appPath + L"\\Google\\Chrome\\Application\\chrome.exe";
+    }
+
+    // Get a temp location
+    CString temp;
+    Helpers::ExpandEnvironmentString(L"%Temp%", temp);
+
+    // Set arguments for the chrome that we launch
+    CString arguments;
+    arguments.Format(L"about:blank --remote-debugging-port=%d --window-size=0,0 --silent-launch --no-first-run --no-default-browser-check --user-data-dir=\"%s\"", port, temp);
+
+    // Launch the process
+    STARTUPINFO si = { 0 };
+    PROCESS_INFORMATION pi = { 0 };
+    si.cb = sizeof(si);
+    si.wShowWindow = SW_MINIMIZE;
+
+    BOOL result = ::CreateProcess(
+        chromePath,
+        arguments.GetBuffer(),
+        nullptr,
+        nullptr,
+        FALSE,
+        0,
+        nullptr,
+        temp,
+        &si,
+        &pi);
+    arguments.ReleaseBuffer();
+
+    if (result)
+    {
+        // Store the handles
+        CHandle hThread(pi.hThread);
+        m_hChromeProcess.Attach(pi.hProcess);
+        DWORD waitResult = ::WaitForInputIdle(m_hChromeProcess, 30000);
+        
+        info.GetReturnValue().Set(true);
+    }
+    else
+    {
+        Log("Could not open Chrome. Please ensure that Chrome is installed.");
     }
 }
 

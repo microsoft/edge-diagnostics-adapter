@@ -12,6 +12,7 @@ MessageReceiver::MessageReceiver(_In_ Nan::Callback* pCallback, _In_ Nan::Callba
     m_pReceiverHwnd(pReceiverHwnd),
     m_pExecutionProgress(nullptr)
 {
+    uv_mutex_init(&m_lock);
 }
 
 MessageReceiver::~MessageReceiver()
@@ -79,10 +80,14 @@ LRESULT MessageReceiver::OnMessageFromEdge(UINT nMsg, WPARAM wParam, LPARAM lPar
     // Now that we have parsed out the arguments, tell the javascript about it
     if (m_pExecutionProgress != nullptr)
     {
-        std::ostringstream os;
-        os << proxyHwnd << ':' << utf8;
-        string msg(os.str());
-        m_pExecutionProgress->Send(msg.c_str(), msg.length());
+        uv_mutex_lock(&m_lock);
+        MessageInfo info;
+        info.hwndFrom = proxyHwnd;
+        info.message = utf8;
+        m_messages.push_back(info);
+        uv_mutex_unlock(&m_lock);
+
+        m_pExecutionProgress->Send(nullptr, 0);
     }
     return 0;
 }
@@ -130,17 +135,21 @@ void MessageReceiver::Execute(const ExecutionProgress& progress)
 void MessageReceiver::HandleProgressCallback(const char* data, size_t size)
 {
     Nan::HandleScope scope;
+
+    vector<MessageInfo> messages;
+    uv_mutex_lock(&m_lock);
+    messages.assign(m_messages.begin(), m_messages.end());
+    m_messages.clear();
+    uv_mutex_unlock(&m_lock);
     
-    string total(data, size);
-    size_t index = total.find(':');
-    if (index > 0) 
+    for (auto& info : messages)
     {
-        string id(total.substr(0, index));
-        string msg(total.substr(index + 1));
+        CStringA id;
+        id.Format("%p", info.hwndFrom);
 
         Local<Value> argv[] = {
             Nan::New<String>(id).ToLocalChecked(),
-            Nan::New<String>(msg).ToLocalChecked()
+            Nan::New<String>(info.message).ToLocalChecked()
         };
         m_pProgressCallback->Call(2, argv);
     }

@@ -46,6 +46,7 @@ export module EdgeAdapter {
 
             edgeAdapter.initialize(__dirname, (a, b) => this.onEdgeMessage(a, b), (a) => this.onLogMessage(a));
             edgeAdapter.setSecurityACLs(__dirname + "\\..\\..\\lib\\");
+            edgeAdapter.serveChromeDevTools(chromeToolsPort);
 
             this._hs = http.createServer((a, b) => this.onServerRequest(a, b));
             this._wss = new WebSocketServer({ server: this._hs });
@@ -128,7 +129,6 @@ export module EdgeAdapter {
             if (succeeded) {
                 // Forward messages to the proxy
                 ws.on('message', (msg) => {
-                    this.log(msg);
                     edgeAdapter.forwardTo(instanceId, msg);
                 });
                 
@@ -143,11 +143,9 @@ export module EdgeAdapter {
                 
                 // Remove socket on close or error
                 ws.on('close', () => {
-                    this.log("closed");
                     removeSocket(instanceId);
                 });
                 ws.on('error', () => {
-                    this.log("error");
                     removeSocket(instanceId);
                 });
             } else {
