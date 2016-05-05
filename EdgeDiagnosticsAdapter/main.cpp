@@ -74,10 +74,19 @@ void setSecurityACLs()
 			{
 
 			}
+			else if (dwRes == ERROR_ACCESS_DENIED)
+			{
+				wcout << L"You do not have the required modify permission " << fullPath << " on to allow access to from Edge.";
+				wcout << L"\n";
+				wcout << L"You can either:";
+				wcout << L"\n 1) Grant yourself the modify permission on the parent folder (" << fullPath << ").";
+				wcout << L"\n 2) Grant the Read & Execute permissions on the parent folder (" << fullPath << ") to the user " << (LPTSTR)pAllAppPackagesSID << ".";
+				wcout << L"\n 3) Run this again as an administrator.";
+				wcout << L"\n";
+			}
 			else
 			{
-				// The ACL was not set, this isn't fatal as it only impacts IE in EPM and Edge and the user can set it manually
-				wcout << L"Could not set ACL to allow access to IE EPM or Edge.";
+				wcout << L"Could not set ACL to allow access from Edge.";
 				wcout << L"\n";
 				wcout << Helpers::GetLastErrorMessage().GetBuffer();
 				wcout << L"\n";
