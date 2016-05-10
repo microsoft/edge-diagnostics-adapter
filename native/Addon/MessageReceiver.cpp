@@ -3,7 +3,6 @@
 //
 
 #include "MessageReceiver.h"
-#include <sstream>
 
 MessageReceiver::MessageReceiver(_In_ Nan::Callback* pCallback, _In_ Nan::Callback* pProgressCallback, _In_  HWND proxyHwnd, _In_ HWND* pReceiverHwnd)
   : Nan::AsyncProgressWorker(pCallback),

@@ -1,14 +1,8 @@
 {
     "name": "edge-diagnostics-adapter",
-    "version": "0.2.1",
+    "version": "0.4.0",
     "description": "Microsoft Edge Diagnostics Adapter",
-    "files": [
-        "dist/x64/EdgeDiagnosticsAdapter.exe",
-        "dist/x64/Proxy64.dll",
-        "dist/x64/Proxy.dll",
-        "dist/x86/EdgeDiagnosticsAdapter.exe",
-        "dist/x86/Proxy.dll"
-    ],
+    "files": [],
     "keywords": [
         "edge",
         "diagnostics",

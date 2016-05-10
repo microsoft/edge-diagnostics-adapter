@@ -12,6 +12,7 @@
 #include <Shlobj.h>
 #include <Aclapi.h>
 #include <Sddl.h>
+#include <sstream>
 
 using v8::FunctionTemplate;
 
@@ -267,10 +268,25 @@ NAN_METHOD(setSecurityACLs)
         if (dwRes == ERROR_SUCCESS)
         {
             dwRes = SetNamedSecurityInfo(fullPath.GetBuffer(), SE_FILE_OBJECT, si, NULL, NULL, pNewDACL, NULL);
+            fullPath.ReleaseBuffer();
             if (dwRes == ERROR_SUCCESS)
             {
                 info.GetReturnValue().Set(true);
             }
+            else if (dwRes == ERROR_ACCESS_DENIED)
+			{
+                stringstream msg;
+				msg << "You do not have the required modify permission " << (char*)*path << " on to allow access to from Edge.";
+				msg << "\n";
+				msg << "You can either:";
+				msg << "\n 1) Grant yourself the modify permission on the parent folder (" << (char*)*path << ").";
+				msg << "\n 2) Grant the Read & Execute permissions on the parent folder (" << (char*)*path << ") to the user " << (LPTSTR)pAllAppPackagesSID << ".";
+				msg << "\n 3) Run this again as an administrator.";
+				msg << "\n";
+
+                const std::string& tmp = msg.str();
+                Log(tmp.c_str());
+			}
             else
             {
                 // The ACL was not set, this isn't fatal as it only impacts IE in EPM and Edge and the user can set it manually
