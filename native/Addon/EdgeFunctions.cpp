@@ -319,7 +319,7 @@ NAN_METHOD(openEdge)
     }
 
     HRESULT hr = Helpers::OpenUrlInMicrosoftEdge(url);
-    if (hr == S_OK)
+    if (SUCCEEDED(hr)) // S_FALSE is a valid return code
     {
         info.GetReturnValue().Set(true);
     }

@@ -40,13 +40,20 @@ export module EdgeAdapter {
         private _idToEdgeMap: Map<string, edgeAdapter.EdgeInstanceId> = new Map<string, edgeAdapter.EdgeInstanceId>();
         private _edgeToWSMap: Map<edgeAdapter.EdgeInstanceId, ws[]> = new Map<edgeAdapter.EdgeInstanceId, ws[]>();
 
-        public run(serverPort: number, chromeToolsPort: number): void {
+        public run(serverPort: number, chromeToolsPort: number, url: string): void {
             this._serverPort = serverPort;
             this._chromeToolsPort = chromeToolsPort;
 
             edgeAdapter.initialize(__dirname, (a, b) => this.onEdgeMessage(a, b), (a) => this.onLogMessage(a));
             edgeAdapter.setSecurityACLs(__dirname + "\\..\\..\\lib\\");
-            edgeAdapter.serveChromeDevTools(chromeToolsPort);
+
+            if (chromeToolsPort > 0) {
+                edgeAdapter.serveChromeDevTools(chromeToolsPort);
+            }
+
+            if (url) {
+                edgeAdapter.openEdge(url);
+            }
 
             this._hs = http.createServer((a, b) => this.onServerRequest(a, b));
             this._wss = new WebSocketServer({ server: this._hs });
@@ -131,7 +138,7 @@ export module EdgeAdapter {
                 ws.on('message', (msg) => {
                     edgeAdapter.forwardTo(instanceId, msg);
                 });
-                
+
                 const removeSocket = (instanceId: edgeAdapter.EdgeInstanceId) => {
                     const sockets = this._edgeToWSMap.get(instanceId);
                     const index = sockets.indexOf(ws);
@@ -140,7 +147,7 @@ export module EdgeAdapter {
                     }
                     this._edgeToWSMap.set(instanceId, sockets);
                 };
-                
+
                 // Remove socket on close or error
                 ws.on('close', () => {
                     removeSocket(instanceId);
