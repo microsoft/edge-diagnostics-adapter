@@ -85,7 +85,7 @@ gulp.task('buildnativeprojects', function() {
             .pipe(msbuild({
                 targets: [opts.target],
                 configuration: opts.config,
-                architecture: opts.arch,
+                properties: { Platform: opts.arch },
                 stdout: true,
                 stderr: true,
                 logCommand: true,
@@ -97,8 +97,9 @@ gulp.task('buildnativeprojects', function() {
 gulp.task('buildnativeaddon', ['buildnativeprojects'], function(done) {
     const opts = getNativeBuildOptions();
     const arch = opts.arch == "Win32" ? "ia32" : "x64";
+    const gypPath = __dirname + "/node_modules/.bin/node-gyp";
     
-    return exec('cd native/Addon && node-gyp clean configure build --arch=' + arch + " --module_arch=" + opts.outArch, function (err, stdout, stderr) {
+    return exec('cd native/Addon && ' + gypPath + ' clean configure build --arch=' + arch + " --module_arch=" + opts.outArch, function (err, stdout, stderr) {
         console.log(stdout);
         console.log(stderr);
         done(err);
@@ -113,7 +114,9 @@ gulp.task('buildnative', ['buildnativeaddon'], function() {
 
 gulp.task('default', ['buildnative']);
 
-gulp.task('buildall', ['buildscript', 'buildnative'])
+gulp.task('buildall', ['buildscript', 'buildnative']);
+
+gulp.task('build', ['buildall']);
 
 gulp.task('watch', ['buildscript'], function() {
     log('Watching build sources...');
