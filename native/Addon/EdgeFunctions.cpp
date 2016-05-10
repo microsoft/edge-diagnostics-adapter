@@ -23,7 +23,7 @@ CString m_rootPath;
 HWND m_proxyHwnd;
 CHandle m_hChromeProcess;
 
-NAN_MODULE_INIT(InitAll) 
+NAN_MODULE_INIT(InitAll)
 {
     Nan::Set(target, Nan::New("initialize").ToLocalChecked(),
         Nan::GetFunction(Nan::New<FunctionTemplate>(initialize)).ToLocalChecked());
@@ -51,15 +51,15 @@ inline void EnsureInitialized()
 {
     if (!isInitialized)
     {
-        Nan::ThrowTypeError("Not initialized - you must call initialize(...) before using the adapter."); 
-        return; 
+        Nan::ThrowTypeError("Not initialized - you must call initialize(...) before using the adapter.");
+        return;
     }
 }
 
 void Log(_In_ const char* message)
 {
     Isolate* isolate = Isolate::GetCurrent();
-    
+
     Local<Value> log[1] = { Nan::New<String>(message).ToLocalChecked() };
     Local<Function>::New(isolate, logCallbackHandle)->Call(Nan::GetCurrentContext()->Global(), 1, log);
 }
@@ -82,35 +82,35 @@ inline void EXIT_IF_NOT_S_OK(_In_ HRESULT hr)
 void SendMessageToInstance(_In_ HWND instanceHwnd, _In_ CString& message)
 {
     const size_t ucbParamsSize = sizeof(CopyDataPayload_StringMessage_Data);
-	const size_t ucbStringSize = sizeof(WCHAR) * (::wcslen(message) + 1);
-	const size_t ucbBufferSize = ucbParamsSize + ucbStringSize;
-	std::unique_ptr<BYTE> pBuffer;
-	pBuffer.reset(new BYTE[ucbBufferSize]);
+    const size_t ucbStringSize = sizeof(WCHAR) * (::wcslen(message) + 1);
+    const size_t ucbBufferSize = ucbParamsSize + ucbStringSize;
+    std::unique_ptr<BYTE> pBuffer;
+    pBuffer.reset(new BYTE[ucbBufferSize]);
 
-	COPYDATASTRUCT copyData;
-	copyData.dwData = CopyDataPayload_ProcSignature::StringMessage_Signature;
-	copyData.cbData = static_cast<DWORD>(ucbBufferSize);
-	copyData.lpData = pBuffer.get();
+    COPYDATASTRUCT copyData;
+    copyData.dwData = CopyDataPayload_ProcSignature::StringMessage_Signature;
+    copyData.cbData = static_cast<DWORD>(ucbBufferSize);
+    copyData.lpData = pBuffer.get();
 
-	CopyDataPayload_StringMessage_Data* pData = reinterpret_cast<CopyDataPayload_StringMessage_Data*>(pBuffer.get());
-	pData->uMessageOffset = static_cast<UINT>(ucbParamsSize);
+    CopyDataPayload_StringMessage_Data* pData = reinterpret_cast<CopyDataPayload_StringMessage_Data*>(pBuffer.get());
+    pData->uMessageOffset = static_cast<UINT>(ucbParamsSize);
 
-	HRESULT hr = ::StringCbCopyEx(reinterpret_cast<LPWSTR>(pBuffer.get() + pData->uMessageOffset), ucbStringSize, message, NULL, NULL, STRSAFE_IGNORE_NULLS);
-	EXIT_IF_NOT_S_OK(hr);
+    HRESULT hr = ::StringCbCopyEx(reinterpret_cast<LPWSTR>(pBuffer.get() + pData->uMessageOffset), ucbStringSize, message, NULL, NULL, STRSAFE_IGNORE_NULLS);
+    EXIT_IF_NOT_S_OK(hr);
 
-	::SendMessage(instanceHwnd, WM_COPYDATA, reinterpret_cast<WPARAM>(m_proxyHwnd), reinterpret_cast<LPARAM>(&copyData));
+    ::SendMessage(instanceHwnd, WM_COPYDATA, reinterpret_cast<WPARAM>(m_proxyHwnd), reinterpret_cast<LPARAM>(&copyData));
 }
 
-NAN_METHOD(initialize) 
+NAN_METHOD(initialize)
 {
     //::MessageBox(nullptr, L"Attach", L"Attach", 0);
-    
+
     if (isInitialized)
     {
-        Nan::ThrowTypeError("Already initialized - you cannot call initialize(...) more than once."); 
-        return; 
+        Nan::ThrowTypeError("Already initialized - you cannot call initialize(...) more than once.");
+        return;
     }
-    
+
     if (info.Length() < 3 || !info[0]->IsString() || !info[1]->IsFunction() || !info[2]->IsFunction())
     {
         Nan::ThrowTypeError("Incorrect arguments - initialize(rootPath: string, onEdgeMessage: (msg: string) => void, onLogMessage: (msg: string) => void): boolean");
@@ -126,11 +126,11 @@ NAN_METHOD(initialize)
 
     HRESULT hr = ::CoInitializeEx(nullptr, COINIT_APARTMENTTHREADED | COINIT_DISABLE_OLE1DDE);
     isInitialized = (hr == S_OK || hr == S_FALSE);
-   
+
     info.GetReturnValue().Set(isInitialized);
 }
 
-NAN_METHOD(getEdgeInstances) 
+NAN_METHOD(getEdgeInstances)
 {
     EnsureInitialized();
     if (info.Length() > 0)
@@ -138,16 +138,16 @@ NAN_METHOD(getEdgeInstances)
         Nan::ThrowTypeError("Incorrect arguments - getEdgeInstances(): { id: string, url: string, title: string, processName: string }[]");
         return;
     }
-    
+
     struct Info {
         HWND hwnd;
         CString title;
         CString url;
         CString processName;
     };
-    
+
     vector<Info> instances;
-    
+
     Helpers::EnumWindowsHelper([&](HWND hwndTop) -> BOOL
     {
         Helpers::EnumChildWindowsHelper(hwndTop, [&](HWND hwnd) -> BOOL
@@ -155,10 +155,10 @@ NAN_METHOD(getEdgeInstances)
             if (Helpers::IsWindowClass(hwnd, L"Internet Explorer_Server"))
             {
                 bool isEdgeContentProcess = false;
-                
+
                 DWORD processId;
                 ::GetWindowThreadProcessId(hwnd, &processId);
-                
+
                 CString processName;
                 CHandle handle(::OpenProcess(PROCESS_QUERY_INFORMATION | PROCESS_VM_READ, FALSE, processId));
                 if (handle)
@@ -169,11 +169,11 @@ NAN_METHOD(getEdgeInstances)
                 }
 
                 if (isEdgeContentProcess)
-                {            
+                {
                     CComPtr<IHTMLDocument2> spDocument;
                     HRESULT hr = Helpers::GetDocumentFromHwnd(hwnd, spDocument);
                     if (hr == S_OK)
-                    {   
+                    {
                         CComBSTR url;
                         hr = spDocument->get_URL(&url);
                         if (hr != S_OK)
@@ -187,7 +187,7 @@ NAN_METHOD(getEdgeInstances)
                         {
                             title = L"";
                         }
-                        
+
                         Info i;
                         i.hwnd = hwnd;
                         i.url = url;
@@ -203,23 +203,23 @@ NAN_METHOD(getEdgeInstances)
 
         return TRUE;
     });
-    
+
     int length = (int)instances.size();
     Local<Array> arr = Nan::New<Array>(length);
     for (int i = 0; i < length; i++)
     {
         CStringA id;
         id.Format("%p", instances[i].hwnd);
-        
-        Local<Object> obj = Nan::New<Object>(); 
-        Nan::Set(obj, Nan::New("id").ToLocalChecked(), Nan::New<String>(id).ToLocalChecked()); 
-        Nan::Set(obj, Nan::New("url").ToLocalChecked(), Nan::New<String>(CStringA(instances[i].url)).ToLocalChecked()); 
+
+        Local<Object> obj = Nan::New<Object>();
+        Nan::Set(obj, Nan::New("id").ToLocalChecked(), Nan::New<String>(id).ToLocalChecked());
+        Nan::Set(obj, Nan::New("url").ToLocalChecked(), Nan::New<String>(CStringA(instances[i].url)).ToLocalChecked());
         Nan::Set(obj, Nan::New("title").ToLocalChecked(), Nan::New<String>(CStringA(instances[i].title)).ToLocalChecked());
         Nan::Set(obj, Nan::New("processName").ToLocalChecked(), Nan::New<String>(CStringA(instances[i].processName)).ToLocalChecked());
-                       
+
         Nan::Set(arr, i, obj);
     }
-    
+
     info.GetReturnValue().Set(arr);
 }
 
@@ -236,67 +236,67 @@ NAN_METHOD(setSecurityACLs)
 
     String::Utf8Value path(info[0]->ToString());
     CString fullPath((char*)*path);
-    
-	// Check to make sure that the dll has the ACLs to load in an appcontainer
-	// We're doing this here as the adapter has no setup script and should be xcopy deployable/removeable
-	PACL pOldDACL = NULL, pNewDACL = NULL;
-	PSECURITY_DESCRIPTOR pSD = NULL;
-	EXPLICIT_ACCESS ea;
-	SECURITY_INFORMATION si = DACL_SECURITY_INFORMATION;
 
-	// The check is done on the folder and should be inherited to all objects
-	DWORD dwRes = GetNamedSecurityInfo(fullPath, SE_FILE_OBJECT, DACL_SECURITY_INFORMATION, NULL, NULL, &pOldDACL, NULL, &pSD);
+    // Check to make sure that the dll has the ACLs to load in an appcontainer
+    // We're doing this here as the adapter has no setup script and should be xcopy deployable/removeable
+    PACL pOldDACL = NULL, pNewDACL = NULL;
+    PSECURITY_DESCRIPTOR pSD = NULL;
+    EXPLICIT_ACCESS ea;
+    SECURITY_INFORMATION si = DACL_SECURITY_INFORMATION;
 
-	// Get the SID for "ALL APPLICATION PACAKGES" since it is localized
-	PSID pAllAppPackagesSID = NULL;
-	bool bResult = ConvertStringSidToSid(L"S-1-15-2-1", &pAllAppPackagesSID);
+    // The check is done on the folder and should be inherited to all objects
+    DWORD dwRes = GetNamedSecurityInfo(fullPath, SE_FILE_OBJECT, DACL_SECURITY_INFORMATION, NULL, NULL, &pOldDACL, NULL, &pSD);
 
-	if (bResult)
-	{
-		// Initialize an EXPLICIT_ACCESS structure for the new ACE. 
-		ZeroMemory(&ea, sizeof(EXPLICIT_ACCESS));
-		ea.grfAccessPermissions = GENERIC_READ | GENERIC_EXECUTE;
-		ea.grfAccessMode = SET_ACCESS;
-		ea.grfInheritance = SUB_CONTAINERS_AND_OBJECTS_INHERIT;
-		ea.Trustee.TrusteeForm = TRUSTEE_IS_SID;;
-		ea.Trustee.TrusteeType = TRUSTEE_IS_WELL_KNOWN_GROUP;
-		ea.Trustee.ptstrName = (LPTSTR)pAllAppPackagesSID;
+    // Get the SID for "ALL APPLICATION PACAKGES" since it is localized
+    PSID pAllAppPackagesSID = NULL;
+    bool bResult = ConvertStringSidToSid(L"S-1-15-2-1", &pAllAppPackagesSID);
 
-		// Create a new ACL that merges the new ACE into the existing DACL.
-		dwRes = SetEntriesInAcl(1, &ea, pOldDACL, &pNewDACL);
-		if (dwRes == ERROR_SUCCESS)
-		{
-			dwRes = SetNamedSecurityInfo(fullPath.GetBuffer(), SE_FILE_OBJECT, si, NULL, NULL, pNewDACL, NULL);
-			if (dwRes == ERROR_SUCCESS)
-			{
+    if (bResult)
+    {
+        // Initialize an EXPLICIT_ACCESS structure for the new ACE.
+        ZeroMemory(&ea, sizeof(EXPLICIT_ACCESS));
+        ea.grfAccessPermissions = GENERIC_READ | GENERIC_EXECUTE;
+        ea.grfAccessMode = SET_ACCESS;
+        ea.grfInheritance = SUB_CONTAINERS_AND_OBJECTS_INHERIT;
+        ea.Trustee.TrusteeForm = TRUSTEE_IS_SID;;
+        ea.Trustee.TrusteeType = TRUSTEE_IS_WELL_KNOWN_GROUP;
+        ea.Trustee.ptstrName = (LPTSTR)pAllAppPackagesSID;
+
+        // Create a new ACL that merges the new ACE into the existing DACL.
+        dwRes = SetEntriesInAcl(1, &ea, pOldDACL, &pNewDACL);
+        if (dwRes == ERROR_SUCCESS)
+        {
+            dwRes = SetNamedSecurityInfo(fullPath.GetBuffer(), SE_FILE_OBJECT, si, NULL, NULL, pNewDACL, NULL);
+            if (dwRes == ERROR_SUCCESS)
+            {
                 info.GetReturnValue().Set(true);
-			}
-			else
-			{
-				// The ACL was not set, this isn't fatal as it only impacts IE in EPM and Edge and the user can set it manually
+            }
+            else
+            {
+                // The ACL was not set, this isn't fatal as it only impacts IE in EPM and Edge and the user can set it manually
                 Log("ERROR: Could not set ACL to allow access to Edge.\nYou can set the ACL manually by adding Read & Execute permissions for 'All APPLICATION PACAKGES' to each dll.");
-			}
-		}
-	}
-	else
-	{
+            }
+        }
+    }
+    else
+    {
         Log("ERROR: Failed to get the SID for ALL_APP_PACKAGES.");
         Log("ERROR: Win32 error code: " + GetLastError());
-	}
+    }
 
-	if (pAllAppPackagesSID != NULL)
-	{
-		::LocalFree(pAllAppPackagesSID);
-	}
+    if (pAllAppPackagesSID != NULL)
+    {
+        ::LocalFree(pAllAppPackagesSID);
+    }
 
-	if (pSD != NULL)
-	{
-		::LocalFree((HLOCAL)pSD);
-	}
-	if (pNewDACL != NULL)
-	{
-		::LocalFree((HLOCAL)pNewDACL);
-	}
+    if (pSD != NULL)
+    {
+        ::LocalFree((HLOCAL)pSD);
+    }
+    if (pNewDACL != NULL)
+    {
+        ::LocalFree((HLOCAL)pNewDACL);
+    }
 }
 
 NAN_METHOD(openEdge)
@@ -307,12 +307,12 @@ NAN_METHOD(openEdge)
         Nan::ThrowTypeError("Incorrect arguments - openEdge(url: string): boolean");
         return;
     }
-    
+
     info.GetReturnValue().Set(false);
-    
+
     String::Utf8Value openUrl(info[0]->ToString());
     CString url((char*)*openUrl);
-    
+
     if (url.GetLength() == 0)
     {
         url = L"https://www.bing.com";
@@ -337,12 +337,12 @@ NAN_METHOD(killAll)
         Nan::ThrowTypeError("Incorrect arguments - killAll(exeName: string): boolean");
         return;
     }
-    
+
     info.GetReturnValue().Set(false);
-    
+
     String::Utf8Value exeName(info[0]->ToString());
     CString name((char*)*exeName);
-    
+
     HRESULT hr = Helpers::KillAllProcessByExe(name);
     if (hr == S_OK)
     {
@@ -362,14 +362,14 @@ NAN_METHOD(serveChromeDevTools)
         Nan::ThrowTypeError("Incorrect arguments - serveChromeDevTools(port: number): boolean");
         return;
     }
-    
+
     info.GetReturnValue().Set(false);
-    
+
     int port = (info[0]->NumberValue());
-    
+
     // Find the chrome install location via the registry
     CString chromePath;
-    
+
     // First see if we can find where Chrome is installed from the registry. This will only succeed if Chrome is installed for all users
     CString keyPath = L"SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\App Paths\\chrome.exe";
     CRegKey regKey;
@@ -427,7 +427,7 @@ NAN_METHOD(serveChromeDevTools)
         CHandle hThread(pi.hThread);
         m_hChromeProcess.Attach(pi.hProcess);
         DWORD waitResult = ::WaitForInputIdle(m_hChromeProcess, 30000);
-        
+
         info.GetReturnValue().Set(true);
     }
     else
@@ -444,14 +444,14 @@ NAN_METHOD(connectTo)
         Nan::ThrowTypeError("Incorrect arguments - connectTo(id: string): string");
         return;
     }
-    
+
     String::Utf8Value id(info[0]->ToString());
     #pragma warning(disable: 4312) // truncation to int
     HWND hwnd = (HWND)::strtol((const char*)(*id), NULL, 16);
     #pragma warning(default: 4312)
 
     info.GetReturnValue().Set(Nan::Null());
-    
+
     CComPtr<IHTMLDocument2> spDocument;
     HRESULT hr = Helpers::GetDocumentFromHwnd(hwnd, spDocument);
     if (hr == S_OK)
@@ -462,34 +462,34 @@ NAN_METHOD(connectTo)
         BOOL isWoWTab = FALSE;
         ::IsWow64Process(GetCurrentProcess(), &isWoWTab);
         bool is64BitTab = is64BitOS && !isWoWTab;
-    
+
         CString path(m_rootPath);
         path.Append(L"\\..\\..\\lib\\");
         if (is64BitTab)
-		{
-			path.Append(L"Proxy64.dll");
-	    }
-		else
-		{
-			path.Append(L"Proxy.dll");
-		}
-        
-        CComPtr<IOleWindow> spSite;
-		hr = Helpers::StartDiagnosticsMode(spDocument, __uuidof(ProxySite), path, __uuidof(spSite), reinterpret_cast<void**>(&spSite.p));
-		if (hr == E_ACCESSDENIED && is64BitTab && ::IsWindows8Point1OrGreater())
-		{
-            Log("ERROR: Access denied while attempting to connect to a 64 bit tab. The most common solution to this problem is to open an Administrator command prompt, navigate to the folder containing this adapter, and type \"icacls proxy64.dll /grant \"ALL APPLICATION PACKAGES\":(RX)\"");		
+        {
+            path.Append(L"Proxy64.dll");
         }
-		else if (hr == ::HRESULT_FROM_WIN32(ERROR_MOD_NOT_FOUND) && is64BitTab) 
+        else
         {
-			Log("ERROR: Module could not be found. Ensure Proxy64.dll exists in the out\\lib\\ folder");
-		}
-		else if (hr == ::HRESULT_FROM_WIN32(ERROR_MOD_NOT_FOUND) && !is64BitTab) 
+            path.Append(L"Proxy.dll");
+        }
+
+        CComPtr<IOleWindow> spSite;
+        hr = Helpers::StartDiagnosticsMode(spDocument, __uuidof(ProxySite), path, __uuidof(spSite), reinterpret_cast<void**>(&spSite.p));
+        if (hr == E_ACCESSDENIED && is64BitTab && ::IsWindows8Point1OrGreater())
         {
-			Log("ERROR: Module could not be found. Ensure Proxy.dll exists in the out\\lib\\ folder");
-		}
-		else if (hr != S_OK)
-		{
+            Log("ERROR: Access denied while attempting to connect to a 64 bit tab. The most common solution to this problem is to open an Administrator command prompt, navigate to the folder containing this adapter, and type \"icacls proxy64.dll /grant \"ALL APPLICATION PACKAGES\":(RX)\"");
+        }
+        else if (hr == ::HRESULT_FROM_WIN32(ERROR_MOD_NOT_FOUND) && is64BitTab)
+        {
+            Log("ERROR: Module could not be found. Ensure Proxy64.dll exists in the out\\lib\\ folder");
+        }
+        else if (hr == ::HRESULT_FROM_WIN32(ERROR_MOD_NOT_FOUND) && !is64BitTab)
+        {
+            Log("ERROR: Module could not be found. Ensure Proxy.dll exists in the out\\lib\\ folder");
+        }
+        else if (hr != S_OK)
+        {
             EXIT_IF_NOT_S_OK(hr);
         }
         else
@@ -502,13 +502,13 @@ NAN_METHOD(connectTo)
             CStringA newId;
             newId.Format("%p", hwnd);
             info.GetReturnValue().Set(Nan::New<String>(newId).ToLocalChecked());
-            
+
             if (!isMessageReceiverCreated)
             {
                 isMessageReceiverCreated = true;
                 Isolate* isolate = Isolate::GetCurrent();
                 Local<Function> progress = Local<Function>::New(isolate, messageCallbackHandle);
-                
+
                 MessageReceiver* pMR = new MessageReceiver(new Nan::Callback(progress), new Nan::Callback(progress), hwnd, &m_proxyHwnd);
                 m_proxyHwnd = pMR->m_hWnd;
                 AsyncQueueWorker(pMR);
@@ -525,16 +525,16 @@ NAN_METHOD(injectScriptTo)
         Nan::ThrowTypeError("Incorrect arguments - injectScriptTo(instanceId: string, engine: string, filename: string, script: string): void");
         return;
     }
-    
+
     String::Utf8Value edgeInstanceId(info[0]->ToString());
     #pragma warning(disable: 4312) // truncation to int
     HWND instanceHwnd = (HWND)::strtol((const char*)(*edgeInstanceId), NULL, 16);
     #pragma warning(default: 4312)
-    
+
     String::Utf8Value engine(info[1]->ToString());
     String::Utf8Value filename(info[2]->ToString());
     String::Utf8Value script(info[3]->ToString());
-    
+
     CStringA command;
     command.Format("inject:%s:%s:%s", (const char*)(*engine), (const char*)(*filename), (const char*)(*script));
     CString message(command);
@@ -549,14 +549,14 @@ NAN_METHOD(forwardTo)
         Nan::ThrowTypeError("Incorrect arguments - forwardTo(instanceId: string, message: string): void");
         return;
     }
-    
+
     String::Utf8Value edgeInstanceId(info[0]->ToString());
     #pragma warning(disable: 4312) // truncation to int
     HWND instanceHwnd = (HWND)::strtol((const char*)(*edgeInstanceId), NULL, 16);
     #pragma warning(default: 4312)
-    
+
     String::Utf8Value actualMessage(info[1]->ToString());
-    
+
     CStringA convertedMessage((const char*)(*actualMessage));
     CString message(convertedMessage);
     SendMessageToInstance(instanceHwnd, message);

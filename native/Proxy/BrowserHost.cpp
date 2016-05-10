@@ -42,7 +42,7 @@ HRESULT BrowserHost::Initialize(_In_ HWND proxyHwnd, _In_ IUnknown* pWebControl)
     FAIL_IF_NOT_S_OK(hr);
 
 	///hr = this->DispEventAdvise(m_spWebControl);
-	
+
     FAIL_IF_NOT_S_OK(hr);
 
     return hr;

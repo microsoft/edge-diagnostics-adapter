@@ -3,7 +3,7 @@
 //
 
 import "oaidl.idl";
-  
+
 [
     object,
     uuid(E92F0BD1-2A98-41E2-99C6-611EBBEB28F4),

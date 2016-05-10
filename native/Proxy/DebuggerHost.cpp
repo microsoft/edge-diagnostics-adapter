@@ -7,7 +7,7 @@
 
 using namespace std::placeholders;
 
-DebuggerHost::DebuggerHost() : 
+DebuggerHost::DebuggerHost() :
     ScriptEngineHost()
 {
     m_hBreakNotificationComplete.Attach(::CreateEvent(nullptr, TRUE, FALSE, nullptr));

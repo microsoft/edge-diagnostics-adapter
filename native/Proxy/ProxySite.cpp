@@ -50,7 +50,7 @@ STDMETHODIMP ProxySite::SetSite(IUnknown* pUnkSite)
         CComObject<BrowserMessageQueue>* pMessageQueue;
         hr = CComObject<BrowserMessageQueue>::CreateInstance(&pMessageQueue);
         ATLENSURE_RETURN_HR(hr == S_OK && pMessageQueue != nullptr, E_UNEXPECTED);
-        
+
         m_spMessageQueue = pMessageQueue;
         pMessageQueue->Initialize(spDebugApplication110, this, this->m_hWnd, true);
 
@@ -107,7 +107,7 @@ STDMETHODIMP ProxySite::ThreadCallHandler(_In_ DWORD_PTR dwParam1, _In_ DWORD_PT
     }
     else if (dwParam1 == WM_BREAK_OCCURRED)
     {
-        // TODO: Notify the browser ui thread engines of the break 
+        // TODO: Notify the browser ui thread engines of the break
     }
 
     return S_OK;
@@ -232,7 +232,7 @@ HRESULT ProxySite::LoadPDM(_In_ DWORD attachType, _Out_ CComPtr<IRemoteDebugAppl
         {
             // Get the debug application now that source rundown mode has initiated the PDM
             spServiceProvider->QueryService(IID_IDebugApplication, &(spRemoteDebugApplication.p));
-            ATLASSERT(spRemoteDebugApplication.p != nullptr);        
+            ATLASSERT(spRemoteDebugApplication.p != nullptr);
 		}
     }
 

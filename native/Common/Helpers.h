@@ -35,8 +35,8 @@ namespace Helpers
     CStringA EscapeJsonString(_In_ const CString& value);
     CStringA GetFileVersion(_In_ LPCWSTR filePath);
 
-	CStringA GetLastErrorMessage();
+    CStringA GetLastErrorMessage();
 
-	HRESULT OpenUrlInMicrosoftEdge(_In_ PCWSTR url);
-	HRESULT KillAllProcessByExe(const wchar_t *filename);
+    HRESULT OpenUrlInMicrosoftEdge(_In_ PCWSTR url);
+    HRESULT KillAllProcessByExe(const wchar_t *filename);
 }

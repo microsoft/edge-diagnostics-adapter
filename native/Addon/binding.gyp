@@ -9,16 +9,16 @@
             "target_name": "<(module_name)<(module_arch)",
             "sources": [ "EdgeFunctions.cpp", "MessageReceiver.cpp", "stdafx.cpp" ],
             'msvs_precompiled_header': 'stdafx.h',
-            'msvs_precompiled_source': 'stdafx.cpp',            
+            'msvs_precompiled_source': 'stdafx.cpp',
             "include_dirs" : [
- 	 			"<!(node -e \"require('nan')\")",
+                "<!(node -e \"require('nan')\")",
                 "../Common/",
                 "../../out/native/$(ConfigurationName)/$(PlatformName)"
-			],
+            ],
             "defines": [
                 "UNICODE"
             ],
-            "libraries": [ 
+            "libraries": [
                 "version.lib",
                 "Psapi.lib",
                 "../../../out/native/$(ConfigurationName)/$(PlatformName)/Common.lib"
@@ -28,7 +28,7 @@
                     'msvs_settings': {
                         "VCCLCompilerTool": {
                             'WholeProgramOptimization': 'false',
-                        }       
+                        }
                     },
                 }
             }

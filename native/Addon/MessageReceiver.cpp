@@ -6,7 +6,7 @@
 #include <sstream>
 
 MessageReceiver::MessageReceiver(_In_ Nan::Callback* pCallback, _In_ Nan::Callback* pProgressCallback, _In_  HWND proxyHwnd, _In_ HWND* pReceiverHwnd)
-  : Nan::AsyncProgressWorker(pCallback), 
+  : Nan::AsyncProgressWorker(pCallback),
     m_pProgressCallback(pProgressCallback),
     m_proxyHwnd(proxyHwnd),
     m_pReceiverHwnd(pReceiverHwnd),
@@ -96,11 +96,11 @@ LRESULT MessageReceiver::OnMessageFromEdge(UINT nMsg, WPARAM wParam, LPARAM lPar
 void MessageReceiver::Execute(const ExecutionProgress& progress)
 {
     m_pExecutionProgress = &progress;
-    
+
     // Initialize COM and uninitialize when it goes out of scope
     HRESULT hrCoInit = ::CoInitializeEx(nullptr, COINIT_APARTMENTTHREADED | COINIT_DISABLE_OLE1DDE);
     std::shared_ptr<HRESULT> spCoInit(&hrCoInit, [](const HRESULT* hrCom) { ::CoUninitialize(); hrCom; });
-    
+
     // Create our message window used to handle window messages
     HWND createdWindow = this->Create(HWND_MESSAGE);
     if (createdWindow != nullptr)
@@ -141,7 +141,7 @@ void MessageReceiver::HandleProgressCallback(const char* data, size_t size)
     messages.assign(m_messages.begin(), m_messages.end());
     m_messages.clear();
     uv_mutex_unlock(&m_lock);
-    
+
     for (auto& info : messages)
     {
         CStringA id;

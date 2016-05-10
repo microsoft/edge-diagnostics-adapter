@@ -68,8 +68,8 @@ private:
             /* [in] */ DWORD_PTR /*dwParam2*/,
             /* [in] */ DWORD_PTR /*dwParam3*/) override
         {
-            // Now we're running on the main browser UI thread through the PDM's thread call mechanisms.  
-            // Before actually forwarding any messages (which might end up executing JavaScript), we need to check that it's safe to do so. 
+            // Now we're running on the main browser UI thread through the PDM's thread call mechanisms.
+            // Before actually forwarding any messages (which might end up executing JavaScript), we need to check that it's safe to do so.
             // We must ensure that:
             // 1. No other messages are already executing and that the thread
             // 2. The thread is actually still suspended for a breakpoint and not at some other stage that triggered a thread switch allowing us to run.
@@ -91,8 +91,8 @@ private:
 
                 ATLASSERT(uiCount >= 1);
 
-                // If uiCount is 1, only we are running.  
-                // If it's greater than 1, we are running but so is something else. 
+                // If uiCount is 1, only we are running.
+                // If it's greater than 1, we are running but so is something else.
                 // We will get picked up again when we handle the threadrequestcomplete event and execute then.
                 if (uiCount <= 1)
                 {

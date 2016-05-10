@@ -8,7 +8,7 @@
 
 using namespace std::placeholders;
 
-WebSocketClientHost::WebSocketClientHost() : 
+WebSocketClientHost::WebSocketClientHost() :
     ScriptEngineHost(),
     m_uiThreadHwnd(0),
     m_serverHwnd(0)
@@ -145,7 +145,7 @@ LRESULT WebSocketClientHost::OnMessageFromWebKit(UINT nMsg, WPARAM wParam, LPARA
                 int nameIndex = message.Find(L":", idIndex);
                 if (nameIndex > idIndex)
                 {
-                    scriptName = message.Mid(idIndex, nameIndex - idIndex ); 
+                    scriptName = message.Mid(idIndex, nameIndex - idIndex );
                     message = message.Mid(nameIndex + 1);
                 }
             }

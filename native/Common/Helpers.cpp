@@ -11,8 +11,8 @@
 #include <webapplication.h>
 #include <sstream>
 
-#define IDM_STARTDIAGNOSTICSMODE 3802 
-#define CP_AUTO 50001 
+#define IDM_STARTDIAGNOSTICSMODE 3802
+#define CP_AUTO 50001
 #define VERSION_SIGNATURE 0xFEEF04BD
 
 namespace Helpers
@@ -298,7 +298,7 @@ namespace Helpers
     CStringA GetFileVersion(_In_ LPCWSTR filePath)
     {
         ::SetLastError(0);
-        DWORD  verSize = ::GetFileVersionInfoSizeW(filePath, NULL);   
+        DWORD  verSize = ::GetFileVersionInfoSizeW(filePath, NULL);
         if (::GetLastError() != 0 || verSize == NULL || verSize == 0)
         {
             return "";
@@ -322,7 +322,7 @@ namespace Helpers
         {
             return "";
         }
-        
+
         // The signature value should always be 0xFEEF04BD according to MSDN
         // https://msdn.microsoft.com/en-us/library/windows/desktop/ms646997(v=vs.85).aspx
         // Though checking in case it's not as the bitwise operators below won't work if not
@@ -339,99 +339,99 @@ namespace Helpers
         ss << ((pVerInfo->dwFileVersionLS >> 16) & 0xffff);
         ss << ".";
         ss << ((pVerInfo->dwFileVersionLS >> 0) & 0xffff);
-                
+
         return ss.str().c_str();
     }
 
-	CStringA GetLastErrorMessage()
-	{
-		std::stringstream ss;
-		ss << "Error Code: ";
-		ss << GetLastError();
+    CStringA GetLastErrorMessage()
+    {
+        std::stringstream ss;
+        ss << "Error Code: ";
+        ss << GetLastError();
 
-		return ss.str().c_str();
-	}
+        return ss.str().c_str();
+    }
 
-	HRESULT OpenUrlInMicrosoftEdge(__in PCWSTR url)
-	{
-		HRESULT hr = E_FAIL;
+    HRESULT OpenUrlInMicrosoftEdge(__in PCWSTR url)
+    {
+        HRESULT hr = E_FAIL;
 
-		CoInitializeEx(nullptr, COINIT_APARTMENTTHREADED);
-		SHELLEXECUTEINFOW sei = { sizeof sei };
-		sei.lpVerb = L"open";
-		std::wstring mywstring(url);
-		std::wstring concatted_stdstr = L"microsoft-edge:" + mywstring;
-		sei.lpFile = concatted_stdstr.c_str();
-		hr = ShellExecuteExW(&sei);
+        CoInitializeEx(nullptr, COINIT_APARTMENTTHREADED);
+        SHELLEXECUTEINFOW sei = { sizeof sei };
+        sei.lpVerb = L"open";
+        std::wstring mywstring(url);
+        std::wstring concatted_stdstr = L"microsoft-edge:" + mywstring;
+        sei.lpFile = concatted_stdstr.c_str();
+        hr = ShellExecuteExW(&sei);
 
-		return hr;
-	}
+        return hr;
+    }
 
-	BOOL CALLBACK TerminateAppEnum(HWND hwnd, LPARAM lParam)
-	{
-		DWORD dwID;
+    BOOL CALLBACK TerminateAppEnum(HWND hwnd, LPARAM lParam)
+    {
+        DWORD dwID;
 
-		::GetWindowThreadProcessId(hwnd, &dwID);
+        ::GetWindowThreadProcessId(hwnd, &dwID);
 
-		if (dwID == (DWORD)lParam)
-		{
-			::PostMessage(hwnd, WM_CLOSE, 0, 0);
-		}
+        if (dwID == (DWORD)lParam)
+        {
+            ::PostMessage(hwnd, WM_CLOSE, 0, 0);
+        }
 
-		return TRUE;
-	}
+        return TRUE;
+    }
 
-	DWORD WINAPI TerminateApp(DWORD dwPID, DWORD dwTimeout)
-	{
-		HANDLE   hProc;
-		DWORD   dwRet;
+    DWORD WINAPI TerminateApp(DWORD dwPID, DWORD dwTimeout)
+    {
+        HANDLE   hProc;
+        DWORD   dwRet;
 
-		// If we can't open the process with PROCESS_TERMINATE rights,
-		// then we give up immediately.
-		hProc = ::OpenProcess(SYNCHRONIZE | PROCESS_TERMINATE, FALSE, dwPID);
+        // If we can't open the process with PROCESS_TERMINATE rights,
+        // then we give up immediately.
+        hProc = ::OpenProcess(SYNCHRONIZE | PROCESS_TERMINATE, FALSE, dwPID);
 
-		if (hProc == NULL)
-		{
-			return E_FAIL;
-		}
+        if (hProc == NULL)
+        {
+            return E_FAIL;
+        }
 
-		// TerminateAppEnum() posts WM_CLOSE to all windows whose PID
-		// matches your process's.
-		EnumWindows((WNDENUMPROC)TerminateAppEnum, (LPARAM)dwPID);
+        // TerminateAppEnum() posts WM_CLOSE to all windows whose PID
+        // matches your process's.
+        EnumWindows((WNDENUMPROC)TerminateAppEnum, (LPARAM)dwPID);
 
-		// Wait on the handle. If it signals, great. If it times out,
-		// then you kill it.
-		if (WaitForSingleObject(hProc, dwTimeout) != WAIT_OBJECT_0)
-		{
-			dwRet = (::TerminateProcess(hProc, 0) ? S_OK : E_FAIL);
-		}
-		else
-		{
-			dwRet = 0;
-		}
+        // Wait on the handle. If it signals, great. If it times out,
+        // then you kill it.
+        if (WaitForSingleObject(hProc, dwTimeout) != WAIT_OBJECT_0)
+        {
+            dwRet = (::TerminateProcess(hProc, 0) ? S_OK : E_FAIL);
+        }
+        else
+        {
+            dwRet = 0;
+        }
 
-		CloseHandle(hProc);
+        CloseHandle(hProc);
 
-		return dwRet;
-	}
+        return dwRet;
+    }
 
-	HRESULT KillAllProcessByExe(const wchar_t *filename)
-	{
-		HANDLE hSnapShot = CreateToolhelp32Snapshot(TH32CS_SNAPALL, NULL);
-		PROCESSENTRY32 pEntry;
-		pEntry.dwSize = sizeof(pEntry);
-		BOOL hRes = Process32First(hSnapShot, &pEntry);
-		while (hRes)
-		{
-			if (wcscmp(pEntry.szExeFile, filename) == 0)
-			{
-				TerminateApp(pEntry.th32ProcessID, 1000);
+    HRESULT KillAllProcessByExe(const wchar_t *filename)
+    {
+        HANDLE hSnapShot = CreateToolhelp32Snapshot(TH32CS_SNAPALL, NULL);
+        PROCESSENTRY32 pEntry;
+        pEntry.dwSize = sizeof(pEntry);
+        BOOL hRes = Process32First(hSnapShot, &pEntry);
+        while (hRes)
+        {
+            if (wcscmp(pEntry.szExeFile, filename) == 0)
+            {
+                TerminateApp(pEntry.th32ProcessID, 1000);
 
-			}
-			hRes = Process32Next(hSnapShot, &pEntry);
-		}
-		CloseHandle(hSnapShot);
+            }
+            hRes = Process32Next(hSnapShot, &pEntry);
+        }
+        CloseHandle(hSnapShot);
 
-		return S_OK;
-	}
+        return S_OK;
+    }
 }

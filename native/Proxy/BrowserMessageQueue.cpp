@@ -31,9 +31,9 @@ void BrowserMessageQueue::Initialize(_In_ IDebugApplication110* pDebugApplicatio
     {
         HRESULT hr = ::AtlAdvise(m_spDebugApplication, GetUnknown(), IID_IRemoteDebugApplicationEvents, &m_appCookie);
         ATLASSERT(hr == S_OK);
-        if (hr == S_OK) 
-        { 
-            m_isAppAdvised = true; 
+        if (hr == S_OK)
+        {
+            m_isAppAdvised = true;
         }
 
         this->TryMainThreadAdvise();
@@ -121,7 +121,7 @@ BOOL BrowserMessageQueue::PostProcessPacketsMessage(bool postIfAny)
 {
     if (!m_isValid)
     {
-        // It's possible for the message queue to contain messages after it is released. 
+        // It's possible for the message queue to contain messages after it is released.
         // Simply ignore the messages as the queue finishes up.
         return FALSE;
     }
@@ -135,7 +135,7 @@ BOOL BrowserMessageQueue::PostProcessPacketsMessage(bool postIfAny)
     }
 
     // We only need to post a message to the other thread if either:
-    // This is the first item placed in the queue 
+    // This is the first item placed in the queue
     // - OR -
     // The queue has had several items placed in it without processing, due to being at a breakpoint
     if (size == 1 || (postIfAny && size > 0))
@@ -182,7 +182,7 @@ HRESULT BrowserMessageQueue::AsyncCallOnMainThread(DWORD_PTR messageID)
 
                     if (cRequestsActive > 0)
                     {
-                        // Returning S_OK if there's an active request because we don't need to post message - 
+                        // Returning S_OK if there's an active request because we don't need to post message -
                         // we'll requeue during OnThreadRequestComplete for that request
                         return S_OK;
                     }
@@ -236,10 +236,10 @@ STDMETHODIMP BrowserMessageQueue::OnEnterBreakPoint(__RPC__in_opt IRemoteDebugAp
 
 STDMETHODIMP BrowserMessageQueue::OnSuspendForBreakPoint()
 {
-    // This means the debugger has fully processed the breakpoint and is ready for things to happen.  
+    // This means the debugger has fully processed the breakpoint and is ready for things to happen.
     // So, let's call process messageswithdebugger to see if we need to execute anything now that it's safe to do so.
     m_safeToEvalScriptDuringDebugThreadCall = true;
-    
+
     this->ProcessMessagesWithDebugger();
 
     if (m_notifyOnBreak)
@@ -254,8 +254,8 @@ void BrowserMessageQueue::ProcessMessagesWithDebugger()
 {
     bool shouldProcessMessages = false;
 
-    // Determine the main thread id and the thread id that just broke. 
-    // If they match, we need to process remaining messages that might 
+    // Determine the main thread id and the thread id that just broke.
+    // If they match, we need to process remaining messages that might
     // have been post messaged but never processed.
 
     if (m_spDebugApplication && m_spCall)
@@ -282,8 +282,8 @@ void BrowserMessageQueue::ProcessMessagesWithDebugger()
     if (shouldProcessMessages)
     {
         // Need to make sure anything still in the post message queue makes it
-        // This call could fail to switch the the PDM thread and return S_FALSE, 
-        // But in that case it must be because we have resumed from the breakpoint, 
+        // This call could fail to switch the the PDM thread and return S_FALSE,
+        // But in that case it must be because we have resumed from the breakpoint,
         // So OnResumeFromBreakPoint will ensure we message the other thread to clear its queue.
         this->TriggerThreadCall();
     }
@@ -312,8 +312,8 @@ STDMETHODIMP BrowserMessageQueue::OnBeginThreadRequest()
 
 STDMETHODIMP BrowserMessageQueue::OnLeaveBreakPoint(__RPC__in_opt IRemoteDebugApplicationThread* prdat)
 {
-    // Determine the main thread id and the thread id that just resumed. 
-    // If they match, we need to process remaining messages that might 
+    // Determine the main thread id and the thread id that just resumed.
+    // If they match, we need to process remaining messages that might
     // have been queued for break mode processing but never processed.
 
     if (prdat)
@@ -344,7 +344,7 @@ STDMETHODIMP BrowserMessageQueue::OnLeaveBreakPoint(__RPC__in_opt IRemoteDebugAp
 void BrowserMessageQueue::TryMainThreadAdvise()
 {
     // Sometimes the main thread hasn't been activated in the PDM yet when we are initialized.
-    // So we call this both when we first initialize, but also when we receive an enter break point event on an 
+    // So we call this both when we first initialize, but also when we receive an enter break point event on an
     // application thread to make sure we get a chance to advise before we enter break mode.
     if (m_isThreadAdvised) { return; }
 
@@ -357,9 +357,9 @@ void BrowserMessageQueue::TryMainThreadAdvise()
             hr = ::AtlAdvise(spThread, GetUnknown(), __uuidof(IDebugApplicationThreadEvents110), &m_threadCookie);
             ATLASSERT(hr == S_OK);
 
-            if (hr == S_OK) 
-            { 
-                m_isThreadAdvised = true; 
+            if (hr == S_OK)
+            {
+                m_isThreadAdvised = true;
             }
         }
     }

@@ -277,8 +277,8 @@ JsErrorCode ScriptEngineHost::DefineCallback(JsValueRef globalObject, const wcha
     return JsNoError;
 }
 
-void ScriptEngineHost::FireEvent(_In_ const wchar_t* eventName, 
-                                 _In_reads_(argumentCount) JsValueRef* arguments, 
+void ScriptEngineHost::FireEvent(_In_ const wchar_t* eventName,
+                                 _In_reads_(argumentCount) JsValueRef* arguments,
                                  _In_ const unsigned short argumentCount,
                                  _In_opt_ function<void(JsValueRef returnValue)> returnCallback)
 {
