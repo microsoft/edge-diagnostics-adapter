@@ -1,0 +1,29 @@
+{
+    "version": "0.1.0",
+    "command": "gulp",
+    "isShellCommand": true,
+    "tasks": [
+       {
+            "taskName": "buildscript",
+            "args": [],
+            "isBuildCommand": true,
+            "isWatching": true,
+            "problemMatcher": [
+                "$tsc"
+            ]
+        },
+        {
+            "taskName": "buildnative",
+            "args": ["--rebuild", "--x64"],
+            "isWatching": false,
+            "problemMatcher": [
+                "$gulp-tsc"
+            ]
+        },
+        {
+            "taskName": "watch-build-test",
+            "isWatching": true,
+            "isTestCommand": true
+        }
+    ]
+}
