@@ -352,6 +352,38 @@ namespace Helpers
         return ss.str().c_str();
     }
 
+    CStringA UTF16toUTF8(const CString& utf16)
+    {
+        CStringA utf8;
+        int length = ::WideCharToMultiByte(CP_UTF8, 0, utf16, -1, nullptr, 0, 0, 0);
+        if (length > 1)
+        {
+            char* buffer = utf8.GetBuffer(length - 1);
+            if (buffer)
+            {
+                ::WideCharToMultiByte(CP_UTF8, 0, utf16, -1, buffer, length, 0, 0);
+            }
+            utf8.ReleaseBuffer();
+        }
+        return utf8;
+    }
+
+    CString UTF8toUTF16(const CStringA& utf8)
+    {
+        CString utf16;
+        int length = ::MultiByteToWideChar(CP_UTF8, 0, utf8, -1, nullptr, 0);
+        if (length > 1)
+        {
+            wchar_t* buffer = utf16.GetBuffer(length - 1);
+            if (buffer)
+            {
+                ::MultiByteToWideChar(CP_UTF8, 0, utf8, -1, buffer, length);
+            }
+            utf16.ReleaseBuffer();
+        }
+        return utf16;
+    }
+
     HRESULT OpenUrlInMicrosoftEdge(__in PCWSTR url)
     {
         HRESULT hr = E_FAIL;

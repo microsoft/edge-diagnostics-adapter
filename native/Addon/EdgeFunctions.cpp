@@ -20,7 +20,7 @@ bool isInitialized = false;
 bool isMessageReceiverCreated = false;
 Nan::Persistent<Function> messageCallbackHandle;
 Nan::Persistent<Function> logCallbackHandle;
-CString m_rootPath;
+CStringA m_rootPath;
 HWND m_proxyHwnd;
 CHandle m_hChromeProcess;
 
@@ -70,18 +70,18 @@ inline void EXIT_IF_NOT_S_OK(_In_ HRESULT hr)
     if (hr != S_OK)
     {
         _com_error err(hr);
-        CString error;
-        error.Format(L"ERROR: HRESULT 0x%08x : %s", hr, err.ErrorMessage());
-
-        CStringA log(error);
-        Log(log.GetString());
+        CStringA error;
+        error.Format("ERROR: HRESULT 0x%08x : %s", hr, err.ErrorMessage());
+        Log(error.GetString());
 
         return;
     }
 }
 
-void SendMessageToInstance(_In_ HWND instanceHwnd, _In_ CString& message)
+void SendMessageToInstance(_In_ HWND instanceHwnd, _In_ CStringA& utf8)
 {
+    CString message = Helpers::UTF8toUTF16(utf8);
+
     const size_t ucbParamsSize = sizeof(CopyDataPayload_StringMessage_Data);
     const size_t ucbStringSize = sizeof(WCHAR) * (::wcslen(message) + 1);
     const size_t ucbBufferSize = ucbParamsSize + ucbStringSize;
@@ -142,9 +142,9 @@ NAN_METHOD(getEdgeInstances)
 
     struct Info {
         HWND hwnd;
-        CString title;
-        CString url;
-        CString processName;
+        CStringA title;
+        CStringA url;
+        CStringA processName;
     };
 
     vector<Info> instances;
@@ -160,14 +160,18 @@ NAN_METHOD(getEdgeInstances)
                 DWORD processId;
                 ::GetWindowThreadProcessId(hwnd, &processId);
 
-                CString processName;
+                CString actualProcessName;
                 CHandle handle(::OpenProcess(PROCESS_QUERY_INFORMATION | PROCESS_VM_READ, FALSE, processId));
                 if (handle)
                 {
-                    DWORD length = ::GetModuleFileNameEx(handle, nullptr, processName.GetBufferSetLength(MAX_PATH), MAX_PATH);
-                    processName.ReleaseBuffer(length);
-                    isEdgeContentProcess = (processName.Find(L"MicrosoftEdgeCP.exe") == processName.GetLength() - 19);
+                    DWORD length = ::GetModuleFileNameEx(handle, nullptr, actualProcessName.GetBufferSetLength(MAX_PATH), MAX_PATH);
+                    actualProcessName.ReleaseBuffer(length);
+                    isEdgeContentProcess = (actualProcessName.Find(L"MicrosoftEdgeCP.exe") == actualProcessName.GetLength() - 19);
+
+                    actualProcessName = ::PathFindFileNameW(actualProcessName);
                 }
+
+                CStringA processName = Helpers::UTF16toUTF8(actualProcessName);
 
                 if (isEdgeContentProcess)
                 {
@@ -191,9 +195,9 @@ NAN_METHOD(getEdgeInstances)
 
                         Info i;
                         i.hwnd = hwnd;
-                        i.url = url;
-                        i.title = title;
-                        i.processName = ::PathFindFileNameW(processName);
+                        i.url = Helpers::UTF16toUTF8(CString(url));
+                        i.title = Helpers::UTF16toUTF8(CString(title));
+                        i.processName = processName;
                         instances.push_back(i);
                     }
                 }
@@ -236,7 +240,8 @@ NAN_METHOD(setSecurityACLs)
     info.GetReturnValue().Set(false);
 
     String::Utf8Value path(info[0]->ToString());
-    CString fullPath((char*)*path);
+    CStringA givenPath((char*)*path);
+    CString fullPath = Helpers::UTF8toUTF16(givenPath);
 
     // Check to make sure that the dll has the ACLs to load in an appcontainer
     // We're doing this here as the adapter has no setup script and should be xcopy deployable/removeable
@@ -327,8 +332,9 @@ NAN_METHOD(openEdge)
     info.GetReturnValue().Set(false);
 
     String::Utf8Value openUrl(info[0]->ToString());
-    CString url((char*)*openUrl);
+    CStringA givenUrl((char*)*openUrl);
 
+    CString url = Helpers::UTF8toUTF16(givenUrl);
     if (url.GetLength() == 0)
     {
         url = L"https://www.bing.com";
@@ -357,7 +363,8 @@ NAN_METHOD(killAll)
     info.GetReturnValue().Set(false);
 
     String::Utf8Value exeName(info[0]->ToString());
-    CString name((char*)*exeName);
+    CStringA givenExeName((char*)*exeName);
+    CString name = Helpers::UTF8toUTF16(givenExeName);
 
     HRESULT hr = Helpers::KillAllProcessByExe(name);
     if (hr == S_OK)
@@ -479,7 +486,7 @@ NAN_METHOD(connectTo)
         ::IsWow64Process(GetCurrentProcess(), &isWoWTab);
         bool is64BitTab = is64BitOS && !isWoWTab;
 
-        CString path(m_rootPath);
+        CString path = Helpers::UTF8toUTF16(m_rootPath);
         path.Append(L"\\..\\..\\lib\\");
         if (is64BitTab)
         {
@@ -551,9 +558,8 @@ NAN_METHOD(injectScriptTo)
     String::Utf8Value filename(info[2]->ToString());
     String::Utf8Value script(info[3]->ToString());
 
-    CStringA command;
-    command.Format("inject:%s:%s:%s", (const char*)(*engine), (const char*)(*filename), (const char*)(*script));
-    CString message(command);
+    CStringA message;
+    message.Format("inject:%s:%s:%s", (const char*)(*engine), (const char*)(*filename), (const char*)(*script));
     SendMessageToInstance(instanceHwnd, message);
 }
 
@@ -571,9 +577,7 @@ NAN_METHOD(forwardTo)
     HWND instanceHwnd = (HWND)::strtol((const char*)(*edgeInstanceId), NULL, 16);
     #pragma warning(default: 4312)
 
-    String::Utf8Value actualMessage(info[1]->ToString());
-
-    CStringA convertedMessage((const char*)(*actualMessage));
-    CString message(convertedMessage);
-    SendMessageToInstance(instanceHwnd, message);
+    String::Utf8Value message(info[1]->ToString());
+    CStringA givenMessage((const char*)(*message));
+    SendMessageToInstance(instanceHwnd, givenMessage);
 }

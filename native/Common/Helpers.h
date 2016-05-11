@@ -37,6 +37,9 @@ namespace Helpers
 
     CStringA GetLastErrorMessage();
 
+    CStringA UTF16toUTF8(const CString& utf16);
+    CString UTF8toUTF16(const CStringA& utf8);
+
     HRESULT OpenUrlInMicrosoftEdge(_In_ PCWSTR url);
     HRESULT KillAllProcessByExe(const wchar_t *filename);
 }

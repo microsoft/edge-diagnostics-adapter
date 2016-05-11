@@ -59,22 +59,8 @@ LRESULT MessageReceiver::OnMessageFromEdge(UINT nMsg, WPARAM wParam, LPARAM lPar
 
     HWND proxyHwnd = reinterpret_cast<HWND>(wParam);
 
-    string utf8;
-    int length = message.GetLength();
-    LPWSTR buffer = message.GetBuffer();
-
     // Convert the message into valid UTF-8 text
-    int utf8Length = ::WideCharToMultiByte(CP_UTF8, 0, buffer, length, nullptr, 0, nullptr, nullptr);
-    if (utf8Length == 0)
-    {
-        message.ReleaseBuffer();
-        ATLENSURE_RETURN_HR(false, ::GetLastError());
-    }
-
-    utf8.resize(utf8Length);
-    utf8Length = ::WideCharToMultiByte(CP_UTF8, 0, buffer, length, &utf8[0], static_cast<int>(utf8.length()), nullptr, nullptr);
-    message.ReleaseBuffer();
-    ATLENSURE_RETURN_HR(utf8Length > 0, ::GetLastError());
+    CStringA utf8 = Helpers::UTF16toUTF8(message);
 
     // Now that we have parsed out the arguments, tell the javascript about it
     if (m_pExecutionProgress != nullptr)
