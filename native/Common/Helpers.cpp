@@ -10,6 +10,7 @@
 #include <ExDisp.h>
 #include <webapplication.h>
 #include <sstream>
+#include <Appmodel.h>
 
 #define IDM_STARTDIAGNOSTICSMODE 3802
 #define CP_AUTO 50001
@@ -466,4 +467,43 @@ namespace Helpers
 
         return S_OK;
     }
+
+    HRESULT GetEdgePackageFamilyName(_Out_ CString& packageFullName)
+	{
+		LONG result = ERROR_SUCCESS;
+		CString edgeFamilyName = L"Microsoft.MicrosoftEdge_8wekyb3d8bbwe";
+
+		UINT32 packageCount = 0;
+		UINT32 packageNamesBufferLength = 0;
+		result = FindPackagesByPackageFamily(edgeFamilyName, PACKAGE_FILTER_HEAD | PACKAGE_INFORMATION_BASIC, &packageCount, nullptr, &packageNamesBufferLength, nullptr, nullptr);
+
+		// The first time we call the API we are getting the length of the buffer which also returns the error ERROR_INSUFFICIENT_BUFFER
+		if (result != ERROR_SUCCESS && result != ERROR_INSUFFICIENT_BUFFER)
+		{
+			return E_FAIL;
+		}
+
+		if (packageCount <= 0)
+		{
+			return E_FAIL;
+		}
+
+		//unique_ptr<PWSTR[]> packageNames(new PWSTR[packageCount]);
+		vector<PWSTR> packageNames;
+		packageNames.resize(packageCount);
+		//unique_ptr<wchar_t[]> buffer(new wchar_t[packageNamesBufferLength]);
+		CString buffer;
+
+		result = FindPackagesByPackageFamily(edgeFamilyName, PACKAGE_FILTER_HEAD | PACKAGE_INFORMATION_BASIC, &packageCount, packageNames.data(), &packageNamesBufferLength, buffer.GetBufferSetLength(packageNamesBufferLength), nullptr);
+		buffer.ReleaseBufferSetLength(packageNamesBufferLength);
+
+		if (result != ERROR_SUCCESS)
+		{
+			return E_FAIL;
+		}
+
+		packageFullName = packageNames[0];
+
+		return S_OK;
+	}
 }

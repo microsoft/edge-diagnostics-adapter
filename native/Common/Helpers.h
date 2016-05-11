@@ -42,4 +42,6 @@ namespace Helpers
 
     HRESULT OpenUrlInMicrosoftEdge(_In_ PCWSTR url);
     HRESULT KillAllProcessByExe(const wchar_t *filename);
+    HRESULT GetEdgePackageFamilyName(_Out_ CString& packageFullName);
 }
+
