@@ -68,31 +68,42 @@ export module EdgeAdapter {
             if (url.lastIndexOf('/') == url.length - 1) {
                 url = url.substr(0, url.length - 1);
             }
-
-            if (url === ('/json') || url === "/json/list") {
-                // Respond with json
-                response.writeHead(200, { "Content-Type": "text/json" });
-                response.write(JSON.stringify(this.getEdgeJson()));
-                response.end();
-            } else if (url === "/json/version") {
-                // Get the version
-                response.writeHead(200, { "Content-Type": "text/json" });
-                response.write(JSON.stringify(this.getEdgeVersionJson()));
-                response.end();
-            } else if (url === "/protocol.json") {
-                // Write out protocol.json file
-                response.writeHead(200, { "Content-Type": "text/json" });
-                response.write(this.getChromeProtocol());
-                response.end();
-            } else if (url === "") {
-                // Respond with attach page
-                response.writeHead(200, { "Content-Type": "text/html" });
-                response.write(fs.readFileSync(__dirname + '/../chromeProtocol/inspect.html', 'utf8'));
-                response.end();
-            } else {
-                // Not found
-                response.writeHead(404, { "Content-Type": "text/html" });
-                response.end();
+            
+            switch(url){
+                case '/json':
+                case '/json/list':
+                    // Respond with json
+                    response.writeHead(200, { "Content-Type": "text/json" });
+                    response.write(JSON.stringify(this.getEdgeJson()));
+                    response.end();
+                    break;
+                
+                case '/json/version':
+                    // Write out protocol.json file
+                    response.writeHead(200, { "Content-Type": "text/json" });
+                    response.write(this.getEdgeVersionJson());
+                    response.end();
+                    break;
+                
+                case '/json/protocol':
+                    // Write out protocol.json file
+                    response.writeHead(200, { "Content-Type": "text/json" });
+                    response.write(this.getChromeProtocol());
+                    response.end();
+                    break;
+                    
+                case '':
+                    // Respond with attach page
+                    response.writeHead(200, { "Content-Type": "text/html" });
+                    response.write(fs.readFileSync(__dirname + '/../chromeProtocol/inspect.html', 'utf8'));
+                    response.end();
+                    break;
+                    
+                default:
+                    // Not found
+                    response.writeHead(404, { "Content-Type": "text/html" });
+                    response.end();                
+                    break;
             }
         }
 
@@ -238,15 +249,16 @@ export module EdgeAdapter {
             return chromeInstances;
         }
 
-        private getEdgeVersionJson(): any {
+        private getEdgeVersionJson(): string {
             // Todo: Currently Edge does not store it's UA string and there is no  way to fetch the UA without loading Edge.
             const userAgent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/46.0.2486.0 Safari/537.36 Edge/13.10586";
-            return {
-                Browser: "Microsoft Edge 13",
+            const version = {
+                "Browser": "Microsoft Edge 13",
                 "Protocol-Version": "1",
                 "User-Agent": userAgent,
                 "WebKit-Version": "0"
-            }
+            };
+            return JSON.stringify(version);
         }
 
         private getChromeProtocol():string {

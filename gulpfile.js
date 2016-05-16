@@ -29,7 +29,8 @@ var lintSources = [
 
 var deploySources = [
     'src/**/*.html',
-    'src/**/*.css'
+    'src/**/*.css',
+    'src/**/*.json'
 ];
 
 var nativeSources = [
