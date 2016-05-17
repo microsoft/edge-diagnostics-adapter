@@ -59,7 +59,7 @@ export module EdgeAdapter {
             this._wss = new WebSocketServer({ server: this._hs });
             this._wss.on('connection', (a) => this.onWSSConnection(a));
 
-            this._hs.listen(serverPort);
+            this._hs.listen(serverPort, "0.0.0.0");
         }
 
         private onServerRequest(request: http.IncomingMessage, response: http.ServerResponse): void {
