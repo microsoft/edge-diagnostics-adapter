@@ -11,6 +11,10 @@
     ],
     "author": "Microsoft Corporation",
     "license": "MIT",
+    "repository": {
+        "type": "git",
+        "url": "https://github.com/Microsoft/edge-diagnostics-adapter.git"
+    },
     "dependencies": {
         "ws": "1.1.0"
     },
@@ -26,7 +30,7 @@
         "node-gyp": "^3.3.1",
         "tslint": "^3.3.0",
         "typescript": "1.8.7",
-        "typings": "0.8.1",
+        "typings": "1.0.4",
         "yargs": "^4.6.0"
     }
 }

@@ -13,7 +13,12 @@
             try {
                 mod = originalReq(path);
             } catch (ex) {
-                mod = originalReq("../../lib/Addon64.node");
+                try {
+                    mod = originalReq("../../lib/Addon64.node");
+                } catch (ex) {
+                    // Potential node version mismatch error
+                    console.log(ex.message, ex.stack);
+                }
             }
             return mod;
         }
@@ -32,8 +37,8 @@ declare var __dirname;
 
 export module EdgeAdapter {
     export class Service {
-        private _hs: http.Server;
-        private _wss: WebSocketServer;
+        private _httpServer: http.Server;
+        private _webSocketServer: WebSocketServer;
         private _serverPort: number;
         private _chromeToolsPort: number;
         private _guidToIdMap: Map<string, string> = new Map<string, string>();
@@ -44,7 +49,7 @@ export module EdgeAdapter {
             this._serverPort = serverPort;
             this._chromeToolsPort = chromeToolsPort;
 
-            edgeAdapter.initialize(__dirname, (a, b) => this.onEdgeMessage(a, b), (a) => this.onLogMessage(a));
+            edgeAdapter.initialize(__dirname, (id, msg) => this.onEdgeMessage(id, msg), (msg) => this.onLogMessage(msg));
             edgeAdapter.setSecurityACLs(__dirname + "\\..\\..\\lib\\");
 
             if (chromeToolsPort > 0) {
@@ -55,11 +60,11 @@ export module EdgeAdapter {
                 edgeAdapter.openEdge(url);
             }
 
-            this._hs = http.createServer((a, b) => this.onServerRequest(a, b));
-            this._wss = new WebSocketServer({ server: this._hs });
-            this._wss.on('connection', (a) => this.onWSSConnection(a));
+            this._httpServer = http.createServer((req, res) => this.onServerRequest(req, res));
+            this._webSocketServer = new WebSocketServer({ server: this._httpServer });
+            this._webSocketServer.on('connection', (client) => this.onWSSConnection(client));
 
-            this._hs.listen(serverPort);
+            this._httpServer.listen(serverPort, "0.0.0.0");
         }
 
         private onServerRequest(request: http.IncomingMessage, response: http.ServerResponse): void {

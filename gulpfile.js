@@ -18,7 +18,7 @@ var sources = [
     'src',
     'lib',
     'test',
-    'typings/main'
+    'typings'
 ].map(function(tsFolder) { return tsFolder + '/**/*.ts'; });
 
 var lintSources = [
@@ -49,10 +49,10 @@ var projectConfig = {
 };
 
 gulp.task('buildtypescript', function () {
-	return gulp.src(sources, { base: '.' }) 
-        .pipe(sourcemaps.init()) 
-        .pipe(ts(projectConfig)).js 
-        .pipe(sourcemaps.write('.', { includeContent: false, sourceRoot: 'file:///' + __dirname })) 
+	return gulp.src(sources, { base: '.' })
+        .pipe(sourcemaps.init())
+        .pipe(ts(projectConfig)).js
+        .pipe(sourcemaps.write('.', { includeContent: false, sourceRoot: 'file:///' + __dirname }))
         .pipe(gulp.dest('out'));
 });
 
@@ -69,7 +69,7 @@ function getNativeBuildOptions() {
     const verbose = (argv.verbose ? '' : 'ErrorsOnly;WarningsOnly')
     const outDir = 'out/native/' + config + '/' + arch + '/';
     const outArch =  (argv.x64 ? '64' : '');
-    
+
     return {
         target: target,
         config: config,
@@ -99,7 +99,7 @@ gulp.task('buildnativeaddon', ['buildnativeprojects'], function(done) {
     const opts = getNativeBuildOptions();
     const arch = opts.arch == "Win32" ? "ia32" : "x64";
     const gypPath = __dirname + "/node_modules/.bin/node-gyp";
-    
+
     return exec('cd native/Addon && ' + gypPath + ' clean configure build --arch=' + arch + " --module_arch=" + opts.outArch, function (err, stdout, stderr) {
         console.log(stdout);
         console.log(stderr);
@@ -109,7 +109,10 @@ gulp.task('buildnativeaddon', ['buildnativeprojects'], function(done) {
 
 gulp.task('buildnative', ['buildnativeaddon'], function() {
     const opts = getNativeBuildOptions();
-    return gulp.src([opts.outDir + 'Proxy' + opts.outArch + '.dll'], { base: opts.outDir })
+    return gulp.src([
+                opts.outDir + 'Proxy' + opts.outArch + '.dll',
+                opts.outDir + 'Proxy' + opts.outArch + '.pdb'
+            ], { base: opts.outDir })
             .pipe(gulp.dest('out/lib'));
 });
 
@@ -124,11 +127,11 @@ gulp.task('watch', ['buildscript'], function() {
     return gulp.watch(sources, ['buildscript']);
 });
 
-gulp.task('tslint', function() { 
+gulp.task('tslint', function() {
     return gulp.src(lintSources, { base: '.' })
-         .pipe(tslint()) 
-         .pipe(tslint.report('verbose')); 
-}); 
+         .pipe(tslint())
+         .pipe(tslint.report('verbose'));
+});
 
 function test() {
     return gulp.src('out/test/**/*.test.js', { read: false })
