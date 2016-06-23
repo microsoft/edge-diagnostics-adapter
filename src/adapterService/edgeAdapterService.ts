@@ -44,6 +44,11 @@ export module EdgeAdapter {
         private _guidToIdMap: Map<string, string> = new Map<string, string>();
         private _idToEdgeMap: Map<string, edgeAdapter.EdgeInstanceId> = new Map<string, edgeAdapter.EdgeInstanceId>();
         private _edgeToWSMap: Map<edgeAdapter.EdgeInstanceId, ws[]> = new Map<edgeAdapter.EdgeInstanceId, ws[]>();
+        private _diagLogging: boolean = false;
+
+        constructor (diagLogging: boolean) {
+            this._diagLogging = diagLogging
+        }
 
         public run(serverPort: number, chromeToolsPort: number, url: string): void {
             this._serverPort = serverPort;
@@ -154,6 +159,9 @@ export module EdgeAdapter {
             if (succeeded) {
                 // Forward messages to the proxy
                 ws.on('message', (msg) => {
+                    if (this._diagLogging) {
+                        console.log("Client:", instanceId, msg);
+                    }
                     edgeAdapter.forwardTo(instanceId, msg);
                 });
 
@@ -184,6 +192,9 @@ export module EdgeAdapter {
         }
 
         private onEdgeMessage(instanceId: edgeAdapter.EdgeInstanceId, msg: string): void {
+            if (this._diagLogging) {
+                console.log("EdgeService:", instanceId, msg);
+            }
             if (this._edgeToWSMap.has(instanceId)) {
                 const sockets = this._edgeToWSMap.get(instanceId)
                 for (let i = 0; i < sockets.length; i++) {
