@@ -73,41 +73,43 @@ export module EdgeAdapter {
             if (url.lastIndexOf('/') == url.length - 1) {
                 url = url.substr(0, url.length - 1);
             }
-            
+
+            const host = request.headers.host || "localhost";
+
             switch(url){
                 case '/json':
                 case '/json/list':
                     // Respond with json
                     response.writeHead(200, { "Content-Type": "text/json" });
-                    response.write(JSON.stringify(this.getEdgeJson()));
+                    response.write(JSON.stringify(this.getEdgeJson(host)));
                     response.end();
                     break;
-                
+
                 case '/json/version':
                     // Write out protocol.json file
                     response.writeHead(200, { "Content-Type": "text/json" });
                     response.write(this.getEdgeVersionJson());
                     response.end();
                     break;
-                
+
                 case '/json/protocol':
                     // Write out protocol.json file
                     response.writeHead(200, { "Content-Type": "text/json" });
                     response.write(this.getChromeProtocol());
                     response.end();
                     break;
-                    
+
                 case '':
                     // Respond with attach page
                     response.writeHead(200, { "Content-Type": "text/html" });
                     response.write(fs.readFileSync(__dirname + '/../chromeProtocol/inspect.html', 'utf8'));
                     response.end();
                     break;
-                    
+
                 default:
                     // Not found
                     response.writeHead(404, { "Content-Type": "text/html" });
-                    response.end();                
+                    response.end();
                     break;
             }
         }
@@ -216,9 +218,8 @@ export module EdgeAdapter {
             }
         }
 
-        private getEdgeJson(): IChromeInstance[] {
+        private getEdgeJson(host: string): IChromeInstance[] {
             const chromeInstances: IChromeInstance[] = [];
-            const host = "localhost";
             const map = new Map<string, string>();
 
             const instances = edgeAdapter.getEdgeInstances();
@@ -232,9 +233,10 @@ export module EdgeAdapter {
                 }
 
                 map.set(guid, instances[i].id);
+                map.set(instances[i].id, guid);
 
-                const websocket = `ws://${host}:${this._serverPort}/devtools/page/${guid}`;
-                const devtools = `http://${host}:${this._chromeToolsPort}/devtools/inspector.html?ws=${websocket.substr(5)}`;
+                const websocket = `ws://${host}/devtools/page/${guid}`;
+                const devtools = `http://localhost:${this._chromeToolsPort}/devtools/inspector.html?ws=${websocket.substr(5)}`;
 
                 // Generate the json description of this instance
                 chromeInstances.push({
