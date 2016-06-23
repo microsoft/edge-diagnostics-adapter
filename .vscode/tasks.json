@@ -4,12 +4,13 @@
     "isShellCommand": true,
     "tasks": [
        {
-            "taskName": "buildscript",
+            "taskName": "build",
             "args": [],
             "isBuildCommand": true,
             "isWatching": true,
             "problemMatcher": [
-                "$tsc"
+                "$tsc",
+                "$gulp-tsc"
             ]
         },
         {

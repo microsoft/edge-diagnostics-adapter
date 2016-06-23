@@ -47,7 +47,7 @@ export module EdgeAdapter {
         private _diagLogging: boolean = false;
 
         constructor (diagLogging: boolean) {
-            this._diagLogging = diagLogging
+            this._diagLogging = diagLogging;
         }
 
         public run(serverPort: number, chromeToolsPort: number, url: string): void {
