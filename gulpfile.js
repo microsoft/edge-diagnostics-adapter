@@ -4,8 +4,11 @@
 
 const gulp = require('gulp');
 const path = require('path');
+const fs = require('fs');
 const ts = require('gulp-typescript');
-const log = require('gulp-util').log;
+const gutil = require('gulp-util');
+const log = gutil.log;
+const colors = gutil.colors;
 const typescript = require('typescript');
 const sourcemaps = require('gulp-sourcemaps');
 const mocha = require('gulp-mocha');
@@ -48,6 +51,12 @@ var projectConfig = {
     moduleResolution: "node"
 };
 
+gulp.task('tslint', function() {
+    return gulp.src(lintSources, { base: '.' })
+         .pipe(tslint())
+         .pipe(tslint.report('verbose'));
+});
+
 gulp.task('buildtypescript', function () {
 	return gulp.src(sources, { base: '.' })
         .pipe(sourcemaps.init())
@@ -56,11 +65,23 @@ gulp.task('buildtypescript', function () {
         .pipe(gulp.dest('out'));
 });
 
-gulp.task('buildscript', ['buildtypescript'], function() {
+gulp.task('buildscript', ['buildtypescript', 'tslint'], function() {
     return gulp.src(deploySources, { base: '.' })
             .pipe(gulp.dest('out'));
 });
 
+function logExec(stdout, stderr) {
+    stdout = stdout.toString().trim();
+    stderr = stderr.toString().trim();
+
+    if (stdout) {
+        stdout.split(/\r?\n/).forEach(line => log(line))
+    }
+
+    if (stderr) {
+        stderr.split(/\r?\n/).forEach(line => log(colors.red(line)));
+    }
+}
 
 function getNativeBuildOptions() {
     const target = (argv.rebuild ? 'Rebuild' : 'Build');
@@ -101,8 +122,7 @@ gulp.task('buildnativeaddon', ['buildnativeprojects'], function(done) {
     const gypPath = __dirname + "/node_modules/.bin/node-gyp";
 
     return exec('cd native/Addon && ' + gypPath + ' clean configure build --arch=' + arch + " --module_arch=" + opts.outArch, function (err, stdout, stderr) {
-        console.log(stdout);
-        console.log(stderr);
+        logExec(stdout, stderr)
         done(err);
     });
 });
@@ -127,12 +147,6 @@ gulp.task('watch', ['buildscript'], function() {
     return gulp.watch(sources, ['buildscript']);
 });
 
-gulp.task('tslint', function() {
-    return gulp.src(lintSources, { base: '.' })
-         .pipe(tslint())
-         .pipe(tslint.report('verbose'));
-});
-
 function test() {
     return gulp.src('out/test/**/*.test.js', { read: false })
         .pipe(mocha({ ui: 'tdd' }))
@@ -148,3 +162,16 @@ gulp.task('test', test);
 gulp.task('watch-build-test', ['build', 'build-test'], function() {
     return gulp.watch(sources, ['build', 'build-test']);
 });
+
+gulp.task('copypasta', function(done) {
+    // Recursively copy out folder to another folder
+    if(!argv.outDir || !fs.existsSync(argv.outDir)) {
+        log(colors.red("Usage: gulp copypasta --outDir <path>"));
+        return;
+    }
+
+    exec(`xcopy out ${argv.outDir} /S /Y /D`, function (err, stdout, stderr) {
+        logExec(stdout, stderr)
+        done(err);
+    })
+})
