@@ -5,17 +5,6 @@
 #include "stdafx.h"
 #include "Messages.h"
 
-UINT Get_WM_SET_CONNECTION_HWND()
-{
-    static UINT s_setConnectionMessage = 0;
-    if (s_setConnectionMessage == 0)
-    {
-        s_setConnectionMessage = ::RegisterWindowMessage(L"WM_SET_CONNECTION_HWND");
-    }
-
-    return s_setConnectionMessage;
-}
-
 PCOPYDATASTRUCT MakeCopyDataStructCopy(_In_ const PCOPYDATASTRUCT pCopyDataStruct)
 {
     PCOPYDATASTRUCT const pCopyDataStructCopy = new COPYDATASTRUCT;
