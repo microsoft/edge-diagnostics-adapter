@@ -234,6 +234,10 @@ export module EdgeAdapter {
             const map = new Map<string, string>();
 
             const instances = edgeAdapter.getEdgeInstances();
+            if (this._diagLogging) {
+                console.log("Edge Instances:", instances);
+            }
+
             for (let i = 0; i < instances.length; i++) {
                 // Get or generate a new guid
                 let guid: string = null;

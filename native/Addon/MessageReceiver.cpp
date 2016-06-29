@@ -92,14 +92,9 @@ void MessageReceiver::Execute(const ExecutionProgress& progress)
     {
         // Allow messages from the proxy
         ::ChangeWindowMessageFilterEx(m_hWnd, WM_COPYDATA, MSGFLT_ALLOW, 0);
-        ::ChangeWindowMessageFilterEx(m_hWnd, Get_WM_SET_CONNECTION_HWND(), MSGFLT_ALLOW, 0);
     }
 
     (*m_pReceiverHwnd) = m_hWnd;
-
-    // Send our hwnd to the proxy so it can connect back
-    BOOL succeeded = ::PostMessage(m_proxyHwnd, Get_WM_SET_CONNECTION_HWND(), reinterpret_cast<WPARAM>(m_hWnd), NULL);
-    ATLENSURE_RETURN_VAL(succeeded, );
 
     // Create a message pump
     MSG msg;

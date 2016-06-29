@@ -87,7 +87,7 @@
       <GenerateDebugInformation>true</GenerateDebugInformation>
     </Link>
     <Midl>
-      <OutputDirectory>$(OurDir)</OutputDirectory>
+      <OutputDirectory>$(OutDir)</OutputDirectory>
     </Midl>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">

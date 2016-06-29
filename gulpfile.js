@@ -71,15 +71,12 @@ gulp.task('buildscript', ['buildtypescript', 'tslint'], function() {
 });
 
 function logExec(stdout, stderr) {
-    stdout = stdout.toString().trim();
-    stderr = stderr.toString().trim();
-
     if (stdout) {
-        stdout.split(/\r?\n/).forEach(line => log(line))
+        stdout.toString().trim().split(/\r?\n/).forEach(line => log(line))
     }
 
     if (stderr) {
-        stderr.split(/\r?\n/).forEach(line => log(colors.red(line)));
+        stderr.toString().trim().split(/\r?\n/).forEach(line => log(colors.red(line)));
     }
 }
 
@@ -122,7 +119,8 @@ gulp.task('buildnativeaddon', ['buildnativeprojects'], function(done) {
     const gypPath = __dirname + "/node_modules/.bin/node-gyp";
 
     return exec('cd native/Addon && ' + gypPath + ' clean configure build --arch=' + arch + " --module_arch=" + opts.outArch, function (err, stdout, stderr) {
-        logExec(stdout, stderr)
+        logExec(stdout);
+        logExec(stderr); // node-gyp sends info through stderr and we don't want to treat it as error
         done(err);
     });
 });

@@ -18,8 +18,6 @@
 #define WM_TEST_START               WM_USER + 9
 
 // Messages used across processes
-UINT Get_WM_SET_CONNECTION_HWND();              // WPARAM is HWND (connectBackTo), LPARAM is NULL
-
 enum class MessageType
 {
     Inject,

@@ -15,7 +15,6 @@ WebSocketClientHost::WebSocketClientHost() :
 {
     // Allow messages from the server
     ::ChangeWindowMessageFilterEx(m_hWnd, WM_COPYDATA, MSGFLT_ALLOW, 0);
-    ::ChangeWindowMessageFilterEx(m_hWnd, Get_WM_SET_CONNECTION_HWND(), MSGFLT_ALLOW, 0);
 }
 
 HRESULT WebSocketClientHost::Initialize(_In_ HWND mainHwnd, _In_ BrowserMessageQueue* pMessageQueue)
@@ -27,15 +26,6 @@ HRESULT WebSocketClientHost::Initialize(_In_ HWND mainHwnd, _In_ BrowserMessageQ
     FAIL_IF_NOT_S_OK(hr);
 
     return hr;
-}
-
-// Window Messages
-LRESULT WebSocketClientHost::OnSetConnectionHwnd(UINT nMsg, WPARAM wParam, LPARAM lParam, _Inout_ BOOL& /*bHandled*/)
-{
-    // Store the HWND used to connect back to the proxy
-    m_serverHwnd = reinterpret_cast<HWND>(wParam);
-
-    return 0;
 }
 
 LRESULT WebSocketClientHost::OnSetMessageHwnd(UINT nMsg, WPARAM wParam, LPARAM lParam, _Inout_ BOOL& /*bHandled*/)
@@ -70,7 +60,7 @@ LRESULT WebSocketClientHost::OnMessageSend(UINT nMsg, WPARAM wParam, LPARAM lPar
 
     // Send the message to the server
     CString messageData(message);
-    this->SendMessageToWebKit(messageData);
+    this->SendMessageToWebSocket(messageData);
 
     return 0;
 }
@@ -107,8 +97,9 @@ LRESULT WebSocketClientHost::OnCopyData(UINT nMsg, WPARAM wParam, LPARAM lParam,
     return 0;
 }
 
-LRESULT WebSocketClientHost::OnMessageFromWebKit(UINT nMsg, WPARAM wParam, LPARAM lParam, _Inout_ BOOL& /*bHandled*/)
+LRESULT WebSocketClientHost::OnMessageFromWebSocket(UINT nMsg, WPARAM wParam, LPARAM lParam, _Inout_ BOOL& /*bHandled*/)
 {
+    m_serverHwnd = reinterpret_cast<HWND>(wParam);
     CString message;
 
     // Scope for the copied data
@@ -209,7 +200,7 @@ HRESULT WebSocketClientHost::SendMessageToThreadEngine(_In_ unique_ptr<MessagePa
 
     return hr;
 }
-HRESULT WebSocketClientHost::SendMessageToWebKit(_In_ CString& message)
+HRESULT WebSocketClientHost::SendMessageToWebSocket(_In_ CString& message)
 {
     const size_t ucbParamsSize = sizeof(CopyDataPayload_StringMessage_Data);
     const size_t ucbStringSize = sizeof(WCHAR) * (::wcslen(message) + 1);

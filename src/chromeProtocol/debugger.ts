@@ -207,6 +207,7 @@ module EdgeDiagnosticsAdapter {
         private _lineEndingsMap: Map<number, number[]>;
         private _intellisenseExpression: string;
         private _intellisenseFrame: any;
+        private _documents: IDocument[] = [];
 
         constructor() {
             this._debugger = debug;
@@ -513,7 +514,7 @@ module EdgeDiagnosticsAdapter {
                     return;
 
                 case "evaluateOnCallFrame":
-                    // Intelisense from the chrome dev tools calls this than runtime.callFunctionOn. 
+                    // Intelisense from the chrome dev tools calls this than runtime.callFunctionOn.
                     // We need to return information on the object when runtime.callFunctionOn is called, so save state we will need now
                     if (request.params.objectGroup === "completion") {
                         this._intellisenseExpression = request.params.expression;
@@ -636,8 +637,8 @@ module EdgeDiagnosticsAdapter {
 
         private debuggerEnable(id: number): void {
             if (!this._isEnabled && !this._isAwaitingDebuggerEnableCall) {
-                var listener = (succeeded: boolean) => {
-                    this._debugger.removeEventListener("debuggingenabled", listener);
+                var onDebuggerEnabled = (succeeded: boolean) => {
+                    this._debugger.removeEventListener("debuggingenabled", onDebuggerEnabled);
                     this._isAwaitingDebuggerEnableCall = false;
                     if (succeeded) {
                         // Now that we have enabled debugging, try to connect to the target
@@ -650,7 +651,7 @@ module EdgeDiagnosticsAdapter {
 
                     this.postResponse(id, { result: {} });
                 };
-                this._debugger.addEventListener("debuggingenabled", listener);
+                this._debugger.addEventListener("debuggingenabled", onDebuggerEnabled);
 
                 // This call is asynchronous as it needs to go across threads
                 this._isAwaitingDebuggerEnableCall = true;
@@ -658,6 +659,8 @@ module EdgeDiagnosticsAdapter {
             } else {
                 // Already connected, so return success
                 this.postResponse(id, { result: {} });
+                // Fire scriptParsed events for documents already loaded
+                this.postDocuments(this._documents);
             }
         }
 
@@ -667,6 +670,17 @@ module EdgeDiagnosticsAdapter {
         }
 
         private onAddDocuments(documents: IDocument[]): void {
+            this._documents = this._documents.concat(documents);
+            this.postDocuments(this._documents);
+        }
+
+        private onRemoveDocuments(docIds: number[]): void {
+        }
+
+        private onUpdateDocuments(documents: IDocument[]): void {
+        }
+
+        private postDocuments(documents: IDocument[]): void {
             for (var i = 0; i < documents.length; i++) {
                 var document: IDocument = documents[i];
                 this._documentMap.set(document.url, document.docId);
@@ -684,7 +698,7 @@ module EdgeDiagnosticsAdapter {
                 }
 
                 this.postNotification("Debugger.scriptParsed", {
-                    scriptId: "" + document.docId,
+                    scriptId: document.docId.toString(),
                     url: docUrl,
                     startLine: 0,
                     startColumn: 0,
@@ -694,12 +708,6 @@ module EdgeDiagnosticsAdapter {
                     sourceMapURL: sourceMapUrl
                 });
             }
-        }
-
-        private onRemoveDocuments(docIds: number[]): void {
-        }
-
-        private onUpdateDocuments(documents: IDocument[]): void {
         }
 
         private onResolveBreakpoints(breakpoints: IResolvedBreakpointInfo[]): void {

@@ -21,7 +21,7 @@ bool isMessageReceiverCreated = false;
 Nan::Persistent<Function> messageCallbackHandle;
 Nan::Persistent<Function> logCallbackHandle;
 CStringA m_rootPath;
-HWND m_proxyHwnd;
+HWND m_messageReceiverHwnd;
 CHandle m_hChromeProcess;
 
 NAN_MODULE_INIT(InitAll)
@@ -99,7 +99,7 @@ void SendMessageToInstance(_In_ HWND instanceHwnd, _In_ CStringA& utf8)
     HRESULT hr = ::StringCbCopyEx(reinterpret_cast<LPWSTR>(pBuffer.get() + pData->uMessageOffset), ucbStringSize, message, NULL, NULL, STRSAFE_IGNORE_NULLS);
     EXIT_IF_NOT_S_OK(hr);
 
-    ::SendMessage(instanceHwnd, WM_COPYDATA, reinterpret_cast<WPARAM>(m_proxyHwnd), reinterpret_cast<LPARAM>(&copyData));
+    ::SendMessage(instanceHwnd, WM_COPYDATA, reinterpret_cast<WPARAM>(m_messageReceiverHwnd), reinterpret_cast<LPARAM>(&copyData));
 }
 
 NAN_METHOD(initialize)
@@ -123,7 +123,7 @@ NAN_METHOD(initialize)
     messageCallbackHandle.Reset(info[1].As<Function>());
     logCallbackHandle.Reset(info[2].As<Function>());
 
-    m_proxyHwnd = nullptr;
+    m_messageReceiverHwnd = nullptr;
 
     HRESULT hr = ::CoInitializeEx(nullptr, COINIT_APARTMENTTHREADED | COINIT_DISABLE_OLE1DDE);
     isInitialized = (hr == S_OK || hr == S_FALSE);
@@ -518,12 +518,12 @@ NAN_METHOD(connectTo)
         else
         {
             // Success, return the new hwnd as an id to this instance
-            HWND hwnd;
-            hr = spSite->GetWindow(&hwnd);
+            HWND instanceHwnd;
+            hr = spSite->GetWindow(&instanceHwnd);
             EXIT_IF_NOT_S_OK(hr);
 
             CStringA newId;
-            newId.Format("%p", hwnd);
+            newId.Format("%p", instanceHwnd);
             info.GetReturnValue().Set(Nan::New<String>(newId).ToLocalChecked());
 
             if (!isMessageReceiverCreated)
@@ -532,9 +532,8 @@ NAN_METHOD(connectTo)
                 Isolate* isolate = Isolate::GetCurrent();
                 Local<Function> progress = Local<Function>::New(isolate, messageCallbackHandle);
 
-                MessageReceiver* pMR = new MessageReceiver(new Nan::Callback(progress), new Nan::Callback(progress), hwnd, &m_proxyHwnd);
-                m_proxyHwnd = pMR->m_hWnd;
-                AsyncQueueWorker(pMR);
+                MessageReceiver* pMessageReceiver = new MessageReceiver(new Nan::Callback(progress), new Nan::Callback(progress), instanceHwnd, &m_messageReceiverHwnd);
+                AsyncQueueWorker(pMessageReceiver);
             }
         }
     }
