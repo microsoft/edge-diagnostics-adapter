@@ -23,6 +23,16 @@ public:
         }
     }
 
+    // Copy constructor
+    JsValueRefPtr(const JsValueRefPtr& other) :
+        m_value(other.m_value)
+    {
+        if (m_value != nullptr)
+        {
+            ::JsAddRef(m_value, nullptr);
+        }
+    }
+
     ~JsValueRefPtr()
     {
         this->Release();
