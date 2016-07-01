@@ -660,7 +660,7 @@ module EdgeDiagnosticsAdapter {
                 // Already connected, so return success
                 this.postResponse(id, { result: {} });
                 // Fire scriptParsed events for documents already loaded
-                this.postDocuments(this._documents);
+                this.fireScriptParsedFor(this._documents);
             }
         }
 
@@ -671,7 +671,8 @@ module EdgeDiagnosticsAdapter {
 
         private onAddDocuments(documents: IDocument[]): void {
             this._documents = this._documents.concat(documents);
-            this.postDocuments(this._documents);
+            // Fire scriptParsed for new documents
+            this.fireScriptParsedFor(documents);
         }
 
         private onRemoveDocuments(docIds: number[]): void {
@@ -680,7 +681,7 @@ module EdgeDiagnosticsAdapter {
         private onUpdateDocuments(documents: IDocument[]): void {
         }
 
-        private postDocuments(documents: IDocument[]): void {
+        private fireScriptParsedFor(documents: IDocument[]): void {
             for (var i = 0; i < documents.length; i++) {
                 var document: IDocument = documents[i];
                 this._documentMap.set(document.url, document.docId);
