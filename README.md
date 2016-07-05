@@ -1,4 +1,5 @@
 # Edge Diagnostics Adapter
+[![build status](https://travis-ci.org/Microsoft/edge-diagnostics-adapter.svg?branch=master)](https://travis-ci.org/Microsoft/edge-diagnostics-adapter)
 
 Edge Diagnostics Adapter is a protocol adapter that enables tools to debug and diagnose Edge using the [Chrome Debugging Protocol](https://chromedevtools.github.io/debugger-protocol-viewer/).
 
