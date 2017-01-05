@@ -251,7 +251,7 @@ export module EdgeAdapter {
                 map.set(instances[i].id, guid);
 
                 const websocket = `ws://${host}/devtools/page/${guid}`;
-                const devtools = `http://localhost:${this._chromeToolsPort}/devtools/inspector.html?ws=${websocket.substr(5)}`;
+                const devtools = `chrome-devtools://devtools/bundled/inspector.html?ws=${websocket.substr(5)}`;
 
                 // Generate the json description of this instance
                 chromeInstances.push({
