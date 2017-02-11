@@ -37,7 +37,7 @@ private:
     HWND m_proxyHwnd;
     HWND* m_pReceiverHwnd;
     Nan::Callback* m_pProgressCallback;
-    const AsyncProgressWorker::ExecutionProgress* m_pExecutionProgress;
+    const Nan::AsyncProgressWorker::ExecutionProgress* m_pExecutionProgress;
     vector<MessageInfo> m_messages;
     uv_mutex_t m_lock;
 };
