@@ -25,7 +25,7 @@
     }
 })();
 
-import {IChromeInstance} from '../../lib/EdgeAdapterInterfaces.d.ts'
+import {IChromeInstance} from '../../lib/EdgeAdapterInterfaces'
 import * as edgeAdapter from '../../lib/Addon.node';
 import * as http from 'http';
 import * as ws from 'ws';
