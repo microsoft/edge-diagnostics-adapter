@@ -5,9 +5,9 @@
             "name": "Launch Server",
             "type": "node",
             "request": "launch",
-            "program": "${workspaceRoot}/out/src/adapterService/edgeAdapter.js",
+            "program": "${workspaceRoot}/src/edgeAdapter.ts",
             "stopOnEntry": false,
-            "args": [],
+            "args": ["--servetools", "--diagnostics"],
             "cwd": "${workspaceRoot}",
             "preLaunchTask": null,
             "runtimeExecutable": null,
@@ -17,10 +17,11 @@
             "env": {
                 "NODE_ENV": "development"
             },
-            "externalConsole": false,
+            "console": "integratedTerminal",
             "sourceMaps": true,
-            "outDir": "${workspaceRoot}/out"
-        },
+            "trace": "all",
+            "outFiles": ["${workspaceRoot}/out/src/**/*.js"]
+        },   
         {
             "name": "Debug Gulp",
             "type": "node",
@@ -40,6 +41,6 @@
             "externalConsole": false,
             "sourceMaps": true,
             "outDir": "${workspaceRoot}/out"
-        },
+        }
     ]
 }

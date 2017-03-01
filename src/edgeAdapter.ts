@@ -3,7 +3,7 @@
 //
 
 import {argv} from 'yargs';
-import {EdgeAdapter} from './adapterService/EdgeAdapterService';
+import {EdgeAdapter} from './adapterService/edgeAdapterService';
 
 if (argv.h || argv.help || argv["?"]) {
     console.log("node edgeAdapter.js <options>");
