@@ -209,17 +209,17 @@ export module EdgeAdapter {
 
         private injectAdapterFiles(instanceId: edgeAdapter.EdgeInstanceId): void {
             const files: { engine: edgeAdapter.EngineType, filename: string }[] = [
-                { engine: "browser", filename: "Assert.js" },
-                { engine: "browser", filename: "Common.js" },
-                { engine: "browser", filename: "Browser.js" },
-                { engine: "browser", filename: "DOM.js" },
-                { engine: "browser", filename: "Runtime.js" },
-                { engine: "browser", filename: "Page.js" },
-                { engine: "browser", filename: "CSSParser.js" },
-                { engine: "browser", filename: "BrowserTool.js" },
-                { engine: "debugger", filename: "Assert.js" },
-                { engine: "debugger", filename: "Common.js" },
-                { engine: "debugger", filename: "Debugger.js" },
+                { engine: "browser", filename: "assert.js" },
+                { engine: "browser", filename: "common.js" },
+                { engine: "browser", filename: "browser.js" },
+                { engine: "browser", filename: "dom.js" },
+                { engine: "browser", filename: "runtime.js" },
+                { engine: "browser", filename: "page.js" },
+                { engine: "browser", filename: "CssParser.js" },
+                { engine: "browser", filename: "browserTool.js" },
+                { engine: "debugger", filename: "assert.js" },
+                { engine: "debugger", filename: "common.js" },
+                { engine: "debugger", filename: "debugger.js" },
             ];
 
             for (let i = 0; i < files.length; i++) {

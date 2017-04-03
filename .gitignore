@@ -20,3 +20,4 @@ native/*/build/
 
 #Visual C++ unwanted files
 *.ipch
+*.db

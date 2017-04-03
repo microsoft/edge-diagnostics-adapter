@@ -108,7 +108,7 @@ gulp.task('buildnativeprojects', function() {
                 stdout: true,
                 stderr: true,
                 logCommand: true,
-                toolsVersion: 14,
+                toolsVersion:14,
                 consoleLoggerParameters: opts.verbose
             }));
 });
@@ -125,7 +125,10 @@ gulp.task('buildnativeaddon', ['buildnativeprojects'], function(done) {
     });
 });
 
-gulp.task('buildnative', ['buildnativeaddon'], function() {
+gulp.task('buildnative', ['buildnativeaddon','copyproxy']);
+
+
+gulp.task('copyproxy', function()  {
     const opts = getNativeBuildOptions();
     return gulp.src([
                 opts.outDir + 'Proxy' + opts.outArch + '.dll',
