@@ -1,0 +1,35 @@
+//
+// Copyright (C) Microsoft. All rights reserved.
+//
+
+import "oaidl.idl";
+
+[
+    object,
+    uuid(DFF2D8F7-37D6-4F50-88B1-CFAACF13CB45),
+		 
+    pointer_default(unique)
+]
+interface INetworkListenerSite : IUnknown {
+};
+
+[
+    uuid(391F861E-08D9-4979-9ECA-3244E34CFA5C),
+    version(1.0),
+]
+library NetworkListenerLib
+{
+    importlib("stdole2.tlb");
+
+    [
+        uuid(032D2EC4-DBEF-4918-B866-068F261D577E),
+    ]
+    coclass NetworkListenerSite
+    {
+        [default] interface INetworkListenerSite;
+        interface IObjectWithSite;
+        interface IOleWindow;
+    };
+};
+
+import "shobjidl.idl";

@@ -1,4 +1,4 @@
-//
+﻿//
 // Copyright (C) Microsoft. All rights reserved.
 //
 
@@ -7,6 +7,8 @@
 #include "../DebuggerCore/DebugThreadWindowMessages.h"
 #include "BrowserHost.h"
 #include "BrowserMessageQueue.h"
+
+typedef int(*LPFNDLLFUNC) (std::function<void(const wchar_t*)>);
 
 struct ThreadParams
 {
@@ -101,6 +103,8 @@ private:
     HRESULT LoadPDM(_In_ DWORD attachType, _Out_ CComPtr<IRemoteDebugApplication>& spRemoteDebugApplication);
     HRESULT IOleCommandTargetExec(_In_ DWORD cmdId, _Inout_ CComPtr<IDispatch>& spDispatch, _Inout_ CComVariant& spResult);
     HRESULT CreateEngine(_In_ CComBSTR& id);
+    void StartListeningEdge();
+    void OnMessageReceived(const wchar_t* message);
 
 private:
     ThreadInfo m_websocketThread;
@@ -108,6 +112,9 @@ private:
 
     map<CComBSTR, CComPtr<BrowserHost>> m_browserEngines;
     CComObjPtr<BrowserMessageQueue> m_spMessageQueue;
+
+    HINSTANCE hinstDLL;
+    LPFNDLLFUNC StartListenersMethod;
 };
 
 OBJECT_ENTRY_AUTO(__uuidof(ProxySite), ProxySite)
