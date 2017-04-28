@@ -22,7 +22,11 @@ module EdgeDiagnosticsAdapter
                 case "setCacheDisabled":
                     processedResult = this.disableCache(request);
                     break;
-            
+
+                case "setUserAgentOverride":
+                    processedResult = this.setActiveUserAgent(request);
+                    break;
+
                 default:
                     break;
             }
@@ -49,6 +53,20 @@ module EdgeDiagnosticsAdapter
 
             try {
                 resources.alwaysRefreshFromServer =  request.params.cacheDisabled;         
+            } catch (ex) {
+                processedResult = {
+                    error: ex
+                };
+            }
+
+            return processedResult;
+        }
+
+        private setActiveUserAgent(request: IWebKitRequest): IWebKitResult {
+            var processedResult: IWebKitResult = {};
+           
+            try {                
+                emulation.userAgentStringManager.current = request.params.userAgent;                 
             } catch (ex) {
                 processedResult = {
                     error: ex
