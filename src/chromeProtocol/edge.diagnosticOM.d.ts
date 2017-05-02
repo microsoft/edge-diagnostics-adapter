@@ -223,7 +223,7 @@ declare module DiagnosticsOM {
     export interface IEmulation {
         /*get*/ geoLocation: IGeoLocation;
         /*get*/ quirksEmulation: boolean;
-        userAgentString: string;
+        /*get*/ userAgentStringManager: IUserAgentStringManager;
         /*get*/ viewport: IViewport;
 
         getActiveStyling(element: Node): boolean;
@@ -265,6 +265,10 @@ declare module DiagnosticsOM {
         clearLatitude(): void;
         clearLongitude(): void;
         clearSpeed(): void;
+    }
+
+    export interface IUserAgentStringManager {
+        current: string;        
     }
 
     export interface ITimerCallback {

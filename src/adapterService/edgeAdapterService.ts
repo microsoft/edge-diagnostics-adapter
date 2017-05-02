@@ -217,9 +217,10 @@ export module EdgeAdapter {
                 { engine: "browser", filename: "page.js" },
                 { engine: "browser", filename: "CssParser.js" },
                 { engine: "browser", filename: "browserTool.js" },
+                { engine: "browser", filename: "network.js" },
                 { engine: "debugger", filename: "assert.js" },
                 { engine: "debugger", filename: "common.js" },
-                { engine: "debugger", filename: "debugger.js" },
+                { engine: "debugger", filename: "debugger.js" },                
             ];
 
             for (let i = 0; i < files.length; i++) {
