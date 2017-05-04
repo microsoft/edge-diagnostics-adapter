@@ -10,6 +10,7 @@ NAN_METHOD(initialize);
 NAN_METHOD(getEdgeInstances);
 NAN_METHOD(setSecurityACLs);
 NAN_METHOD(openEdge);
+NAN_METHOD(closeEdge);
 NAN_METHOD(killAll);
 NAN_METHOD(serveChromeDevTools);
 NAN_METHOD(connectTo);

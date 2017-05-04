@@ -4,6 +4,7 @@ export function initialize(rootPath: string, onEdgeMessage: (instanceId: EdgeIns
 export function getEdgeInstances(): { id: string, url: string, title: string, processName: string }[];
 export function setSecurityACLs(filepath: string): boolean;
 export function openEdge(url: string): boolean;
+export function closeEdge(id: string): boolean;
 export function killAll(exeName: string): boolean;
 export function serveChromeDevTools(port: number): boolean;
 export function connectTo(id: string): EdgeInstanceId;

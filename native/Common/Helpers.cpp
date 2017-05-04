@@ -1,4 +1,4 @@
-//
+﻿//
 // Copyright (C) Microsoft. All rights reserved.
 //
 
@@ -466,6 +466,22 @@ namespace Helpers
         CloseHandle(hSnapShot);
 
         return S_OK;
+    }
+
+    HRESULT CloseWindow(_In_ const HWND hwnd)
+    {
+        DWORD dwID;
+        std::wstring edgeFamilyName = L"MicrosoftEdgeCP.exe";
+
+        ::PostMessage(hwnd, WM_CLOSE, 0, 0);
+
+        // KillAllProcessByExe(edgeFamilyName.c_str());
+        ::GetWindowThreadProcessId(hwnd, &dwID);        
+        TerminateApp(dwID, 1000);
+
+        // ::PostMessage(hwnd, WM_CLOSE, 0, 0);
+
+            return S_OK;
     }
 
     HRESULT GetEdgePackageFamilyName(_Out_ CString& packageFullName)

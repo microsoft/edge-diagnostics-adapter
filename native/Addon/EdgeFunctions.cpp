@@ -1,4 +1,4 @@
-//
+﻿//
 // Copyright (C) Microsoft. All rights reserved.
 //
 
@@ -34,6 +34,8 @@ NAN_MODULE_INIT(InitAll)
         Nan::GetFunction(Nan::New<FunctionTemplate>(setSecurityACLs)).ToLocalChecked());
     Nan::Set(target, Nan::New("openEdge").ToLocalChecked(),
         Nan::GetFunction(Nan::New<FunctionTemplate>(openEdge)).ToLocalChecked());
+    Nan::Set(target, Nan::New("closeEdge").ToLocalChecked(),
+        Nan::GetFunction(Nan::New<FunctionTemplate>(closeEdge)).ToLocalChecked());
     Nan::Set(target, Nan::New("killAll").ToLocalChecked(),
         Nan::GetFunction(Nan::New<FunctionTemplate>(killAll)).ToLocalChecked());
     Nan::Set(target, Nan::New("serveChromeDevTools").ToLocalChecked(),
@@ -43,7 +45,7 @@ NAN_MODULE_INIT(InitAll)
     Nan::Set(target, Nan::New("injectScriptTo").ToLocalChecked(),
         Nan::GetFunction(Nan::New<FunctionTemplate>(injectScriptTo)).ToLocalChecked());
     Nan::Set(target, Nan::New("forwardTo").ToLocalChecked(),
-        Nan::GetFunction(Nan::New<FunctionTemplate>(forwardTo)).ToLocalChecked());
+        Nan::GetFunction(Nan::New<FunctionTemplate>(forwardTo)).ToLocalChecked());    
 }
 
 NODE_MODULE(Addon, InitAll)
@@ -342,6 +344,35 @@ NAN_METHOD(openEdge)
 
     HRESULT hr = Helpers::OpenUrlInMicrosoftEdge(url);
     if (SUCCEEDED(hr)) // S_FALSE is a valid return code
+    {
+        info.GetReturnValue().Set(true);
+    }
+    else
+    {
+        Log("ERROR: Failed to launch Microsoft Edge");
+    }
+}
+
+NAN_METHOD(closeEdge)
+{
+    EnsureInitialized();
+    if (info.Length() < 1 || !info[0]->IsString())
+    {
+        Nan::ThrowTypeError("Incorrect arguments - closeEdge(id: string): boolean");
+        return;
+    }
+
+    info.GetReturnValue().Set(false);
+
+    String::Utf8Value id(info[0]->ToString());
+    #pragma warning(disable: 4312) // truncation to int
+    HWND hwnd = (HWND)::strtol((const char*)(*id), NULL, 16);
+    #pragma warning(default: 4312)
+
+
+    HRESULT hr = Helpers::CloseWindow(hwnd);
+    
+    if (hr == S_OK) // S_FALSE is a valid return code
     {
         info.GetReturnValue().Set(true);
     }
