@@ -75,9 +75,17 @@ export module EdgeAdapter {
         private onServerRequest(request: http.IncomingMessage, response: http.ServerResponse): void {
             // Normalize request url
             let url = request.url.trim().toLocaleLowerCase();
+            // Extract parameter list
+            // TODO: improve the parameter extraction
+            var urlSegements = url.split("?");
+            let param;
+            if(urlSegements.length > 1){
+                url = urlSegements[0];
+                param = urlSegements[1];
+            }                  
             if (url.lastIndexOf('/') == url.length - 1) {
                 url = url.substr(0, url.length - 1);
-            }
+            }                  
 
             const host = request.headers.host || "localhost";
 
@@ -109,6 +117,18 @@ export module EdgeAdapter {
                     response.writeHead(200, { "Content-Type": "text/html" });
                     response.write(fs.readFileSync(__dirname + '/../chromeProtocol/inspect.html', 'utf8'));
                     response.end();
+                    break;
+
+                case '/json/new':
+                    // create a new tab 
+                    // TODO: review why "about:blank" is not working
+                    // if(!param) param = "about:blank";
+                    if(!param) param = "";                  
+                    edgeAdapter.openEdge(param);
+                    break;
+
+                case '/json/close':
+                    // close a tab
                     break;
 
                 default:
@@ -217,9 +237,10 @@ export module EdgeAdapter {
                 { engine: "browser", filename: "page.js" },
                 { engine: "browser", filename: "CssParser.js" },
                 { engine: "browser", filename: "browserTool.js" },
+                { engine: "browser", filename: "network.js" },
                 { engine: "debugger", filename: "assert.js" },
                 { engine: "debugger", filename: "common.js" },
-                { engine: "debugger", filename: "debugger.js" },
+                { engine: "debugger", filename: "debugger.js" },                
             ];
 
             for (let i = 0; i < files.length; i++) {
