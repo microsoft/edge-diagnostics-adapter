@@ -1,6 +1,8 @@
-#pragma once
+﻿#pragma once
 #include <string>
 #include <functional>
+
+#include "MessageManager.h"
 
 using namespace std;
 
@@ -27,6 +29,7 @@ private:
 	EventRegistrationToken _requestSent_token;
 	std::function<void(const wchar_t*)> _callback;
 	unsigned int _processId;
+    MessageManager* _messageManager;
 
 private:
 	//HANDLE hFile;	

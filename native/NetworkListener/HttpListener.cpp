@@ -1,4 +1,4 @@
-#include "stdafx.h"
+﻿#include "stdafx.h"
 #include <windows.h>
 #include <ppltasks.h>
 #include <string>
@@ -12,6 +12,8 @@
 
 using namespace std;
 using namespace concurrency;
+using namespace Windows::Data::Json;
+using namespace Windows::Web::Http;
 using namespace Windows::Web::Http::Diagnostics;
 using namespace Windows::Storage::Streams;
 using namespace Windows::Foundation;
@@ -21,6 +23,8 @@ HttpListener::HttpListener(HttpDiagnosticProvider^ provider, unsigned int proces
 {
 	_provider = provider;
 	_processId = processId;
+    _messageManager = new MessageManager(processId);
+
 
 	TCHAR localPath[MAX_PATH];
 	GetCurrentDirectory(MAX_PATH, localPath);
@@ -50,7 +54,7 @@ HttpListener::~HttpListener()
 
 void HttpListener::StartListening(std::function<void(const wchar_t*)> callback)
 {
-	_callback = callback;
+	_callback = callback;    
 	_provider->Start();
 	EventRegistrationToken _requestSent_token = _provider->RequestSent += ref new TypedEventHandler<HttpDiagnosticProvider^, HttpDiagnosticProviderRequestSentEventArgs^>(this, &HttpListener::OnRequestSent);
 	_provider->ResponseReceived += ref new TypedEventHandler<HttpDiagnosticProvider^, HttpDiagnosticProviderResponseReceivedEventArgs^>(this, &HttpListener::OnResponseReceived);
@@ -61,10 +65,15 @@ void HttpListener::OnRequestSent(HttpDiagnosticProvider ^sender, HttpDiagnosticP
 {
  	OutputDebugStringW(L"OnRequestSent");
 
-	WriteLogFile(_requestSentFileName.c_str(), args->Message->RequestUri->AbsoluteUri->Data());	
+
+    // JsonObject^ serializedMessage = CreateRequestWillBeSendJsonObject(args);
+    JsonObject^ serializedMessage = _messageManager->GenerateRequestWilBeSendMessage(args);
+    WriteLogFile(_requestSentFileName.c_str(), serializedMessage->Stringify()->Data());
+	// WriteLogFile(_requestSentFileName.c_str(), args->Message->RequestUri->AbsoluteUri->Data());	
 
 	auto notification = wstring(L"OnRequestSent::Process Id: ") + to_wstring(_processId) + wstring(L" AbsoluteUri: ") + wstring(args->Message->RequestUri->AbsoluteUri->Data());
 	DoCallback(notification.data());
+    
 }
 
 void HttpListener::OnResponseReceived(HttpDiagnosticProvider ^sender, HttpDiagnosticProviderResponseReceivedEventArgs ^args)

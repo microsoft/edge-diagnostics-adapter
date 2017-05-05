@@ -128,7 +128,10 @@
     </ResourceCompile>
     <PostBuildEvent>
       <Command>copy /Y "$(OutDir)$(ProjectName).dll" "$(SolutionDir)..\out\lib\$(ProjectName).dll"
-copy /Y "$(OutDir)$(ProjectName).pdb" "$(SolutionDir)..\out\lib\$(ProjectName).pdb"</Command>
+copy /Y "$(OutDir)$(ProjectName).pdb" "$(SolutionDir)..\out\lib\$(ProjectName).pdb"
+copy /Y "$(OutDir)$(ProjectName).dll" "$(SolutionDir)\CppHttpDiagnosticProviderPoC\out\x64\Debug\$(ProjectName).dll"
+copy /Y "$(OutDir)$(ProjectName).pdb" "$(SolutionDir)\CppHttpDiagnosticProviderPoC\out\x64\Debug\$(ProjectName).pdb"
+</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
@@ -179,6 +182,7 @@ copy /Y "$(OutDir)$(ProjectName).pdb" "$(SolutionDir)..\out\lib\$(ProjectName).p
   <ItemGroup>
     <ClInclude Include="dllmain.h" />
     <ClInclude Include="HttpListener.h" />
+    <ClInclude Include="MessageManager.h" />
     <ClInclude Include="NetworkMonitor.h" />
     <ClInclude Include="NetworkProxyFuncs.h" />
     <ClInclude Include="resource.h" />
@@ -205,6 +209,7 @@ copy /Y "$(OutDir)$(ProjectName).pdb" "$(SolutionDir)..\out\lib\$(ProjectName).p
       </PrecompiledHeader>
     </ClCompile>
     <ClCompile Include="HttpListener.cpp" />
+    <ClCompile Include="MessageManager.cpp" />
     <ClCompile Include="NetworkListener.cpp" />
     <ClCompile Include="NetworkMonitor.cpp" />
     <ClCompile Include="NetworkProxyFuncs.cpp" />
