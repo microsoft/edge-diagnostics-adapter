@@ -14,6 +14,7 @@ MessageManager::MessageManager(unsigned int processId)
 {
     _processId = processId;
     _currentMessageCounter = 1;
+    _requestSentDictionary = ref new Map<Guid, JsonObject^>();
 }
 
 
@@ -23,8 +24,6 @@ MessageManager::~MessageManager()
 
 String^ MessageManager::GetNextSequenceId(IdTypes counterType)
 {
-    /*int counter = _idCounters[counterType]++;
-    String^t = _processId.ToString() + counter;*/
     return _processId.ToString() + "." + _idCounters[counterType]++;
 }
 
@@ -38,10 +37,10 @@ void InsertNumber(JsonObject^ json, String^ key, double  value)
     json->Insert(key, JsonValue::CreateNumberValue(value));
 }
 
-JsonObject^ SerializeHeaders(HttpDiagnosticProviderRequestSentEventArgs ^data) 
+JsonObject^ SerializeHeaders(HttpRequestMessage^ message)
 {
     JsonObject^ result = ref new JsonObject();
-    auto iterator = data->Message->Headers->First();
+    auto iterator = message->Headers->First();
 
     while (iterator->HasCurrent)
     {
@@ -53,7 +52,7 @@ JsonObject^ SerializeHeaders(HttpDiagnosticProviderRequestSentEventArgs ^data)
     return result;
 }
 
-JsonObject ^ MessageManager::GenerateRequestWilBeSendMessage(HttpDiagnosticProviderRequestSentEventArgs ^data, String^ postPayload)
+JsonObject ^ MessageManager::GenerateRequestWilBeSentMessage(HttpDiagnosticProviderRequestSentEventArgs ^data, String^ postPayload)
 {
     HttpRequestMessage^ message = data->Message;
     JsonObject^ result = ref new JsonObject();    
@@ -69,7 +68,7 @@ JsonObject ^ MessageManager::GenerateRequestWilBeSendMessage(HttpDiagnosticProvi
     InsertString(request, "url", message->RequestUri->AbsoluteUri);
 
     InsertString(request, "method", message->Method->Method);    
-    request->Insert("headers", SerializeHeaders(data));
+    request->Insert("headers", SerializeHeaders(message));
     if (postPayload != nullptr && message->Method->Method == "POST")
     {
         InsertString(request, "postData", postPayload);
@@ -92,5 +91,38 @@ JsonObject ^ MessageManager::GenerateRequestWilBeSendMessage(HttpDiagnosticProvi
 
     result->Insert("params", params);    
 
+    _requestSentDictionary->Insert(data->ActivityId, result);
+
+    return result;
+}
+
+JsonObject^ MessageManager::GenerateResponseReceivedMessage(HttpDiagnosticProviderResponseReceivedEventArgs^ data)
+{   
+    JsonObject^ result = ref new JsonObject();
+    JsonObject^ requestMessage;
+
+    try
+    {
+        requestMessage = _requestSentDictionary->Lookup(data->ActivityId);
+    }
+    catch (const  Platform::OutOfBoundsException^ ex)
+    {
+        //TODO: manage the non found Guid (so no message can be done probably)
+        return nullptr;
+    }
+    auto t = data->Message->RequestMessage;
+    auto e = t->Method->Method;
+    HttpResponseMessage^ message = data->Message;
+    
+    InsertString(result, "method", "Network.responseReceived");
+
+    JsonObject^ params = ref new JsonObject();
+    auto sentParams = requestMessage->GetNamedObject("params");    
+    InsertString(params, "requestId", sentParams->GetNamedString("requestId"));
+    InsertString(params, "frameId", sentParams->GetNamedString("frameId"));
+    InsertString(params, "loaderId", sentParams->GetNamedString("loaderId"));
+
+    result->Insert("params", params);
+    
     return result;
 }

@@ -79,7 +79,7 @@ void HttpListener::OnRequestSent(HttpDiagnosticProvider ^sender, HttpDiagnosticP
             auto payloadLenght = reader->UnconsumedBufferLength;            
             String^ payload = payloadLenght > 0 ? reader->ReadString(payloadLenght) : nullptr;
 
-            JsonObject^ serializedMessage = _messageManager->GenerateRequestWilBeSendMessage(args, payload);
+            JsonObject^ serializedMessage = _messageManager->GenerateRequestWilBeSentMessage(args, payload);
             WriteLogFile(_requestSentFileName.c_str(), serializedMessage->Stringify()->Data());            
             auto notification = wstring(L"OnRequestSent::Process Id: ") + to_wstring(_processId) + wstring(L" AbsoluteUri: ") + wstring(args->Message->RequestUri->AbsoluteUri->Data());
             DoCallback(notification.data());
@@ -87,7 +87,7 @@ void HttpListener::OnRequestSent(HttpDiagnosticProvider ^sender, HttpDiagnosticP
     }
     else 
     {
-        JsonObject^ serializedMessage = _messageManager->GenerateRequestWilBeSendMessage(args);
+        JsonObject^ serializedMessage = _messageManager->GenerateRequestWilBeSentMessage(args);
         WriteLogFile(_requestSentFileName.c_str(), serializedMessage->Stringify()->Data());
         auto notification = wstring(L"OnRequestSent::Process Id: ") + to_wstring(_processId) + wstring(L" AbsoluteUri: ") + wstring(args->Message->RequestUri->AbsoluteUri->Data());
         DoCallback(notification.data());
@@ -98,31 +98,31 @@ void HttpListener::OnResponseReceived(HttpDiagnosticProvider ^sender, HttpDiagno
 {
 	OutputDebugStringW(L"OnResponseReceived");	 
 
-	// Content->ReadAsStringAsync() seems to fail as for the C# project 
- 	// IAsyncOperationWithProgress<Platform::String^, unsigned long long>^ readOp = args->Message->Content->ReadAsStringAsync();
-	IAsyncOperationWithProgress<IBuffer^, unsigned long long>^ readOp = args->Message->Content->ReadAsBufferAsync();	
-	create_task(readOp).then([this](IBuffer^ content)
-	{
-		// read from IBuffer: http://stackoverflow.com/questions/11853838/getting-an-array-of-bytes-out-of-windowsstoragestreamsibuffer
-		auto reader = ::Windows::Storage::Streams::DataReader::FromBuffer(content);
-		
-		auto messageLenght = reader->UnconsumedBufferLength;
+    // Commented because it is failing (pending the refactor to add a message process queue)
+    //JsonObject^ serializedMessage = _messageManager->GenerateResponseReceivedMessage(args);
+    //WriteLogFile(_responseReceivedFileName.c_str(), serializedMessage->Stringify()->Data());
 
-		std::vector<unsigned char> data(messageLenght);
+    //auto notification = wstring(L"OnResponseReceivedMessage::Process Id: ") + to_wstring(_processId);
+    //DoCallback(notification.data());
 
-		if (!data.empty())
-			reader->ReadBytes(
-				::Platform::ArrayReference<unsigned char>(
-					&data[0], data.size()));		
-		
-		WriteLogFile(_responseReceivedFileName.data(), data.data(), messageLenght);
+    IAsyncOperationWithProgress<IBuffer^, unsigned long long>^ readOp = args->Message->Content->ReadAsBufferAsync();
+    create_task(readOp).then([this](IBuffer^ content)
+    {
+        // read from IBuffer: http://stackoverflow.com/questions/11853838/getting-an-array-of-bytes-out-of-windowsstoragestreamsibuffer
+        auto reader = ::Windows::Storage::Streams::DataReader::FromBuffer(content);
 
-		/*std::wstring_convert<std::codecvt_utf8_utf16<wchar_t>> converter;
-		std::string narrow = converter.to_bytes(wide_utf16_source_string);
-		std::wstring wide = converter.from_bytes(narrow_utf8_source_string);
-		auto notification = wstring(L"OnResponseReceived::Process Id: ") + to_wstring(_processId) + wstring(L" AbsoluteUri: ") + wstring(data.data());
-		DoCallback(notification.data());*/
-	});
+        auto messageLenght = reader->UnconsumedBufferLength;
+
+        std::vector<unsigned char> data(messageLenght);
+
+        if (!data.empty())
+            reader->ReadBytes(
+                ::Platform::ArrayReference<unsigned char>(
+                    &data[0], data.size()));
+
+        WriteLogFile(_responseReceivedFileName.data(), data.data(), messageLenght);
+
+    });
 }
 
 void HttpListener::OnRequestResponseCompleted(HttpDiagnosticProvider ^sender, HttpDiagnosticProviderRequestResponseCompletedEventArgs ^args)
