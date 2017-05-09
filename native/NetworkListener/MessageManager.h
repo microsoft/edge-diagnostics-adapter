@@ -20,7 +20,7 @@ public:
 	MessageManager(unsigned int processId);
 	~MessageManager();
 
-    JsonObject ^ MessageManager::GenerateRequestWilBeSendMessage(HttpDiagnosticProviderRequestSentEventArgs ^data, String^ postPayload);
+    JsonObject ^ MessageManager::GenerateRequestWilBeSendMessage(HttpDiagnosticProviderRequestSentEventArgs ^data, String^ postPayload = nullptr);
 
 private:
     unsigned int _processId;

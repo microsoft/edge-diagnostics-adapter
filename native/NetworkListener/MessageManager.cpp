@@ -77,11 +77,7 @@ JsonObject ^ MessageManager::GenerateRequestWilBeSendMessage(HttpDiagnosticProvi
     InsertString(request, "initialPriority", "");
 
     params->Insert("request", request);        
-        
-    // https://docs.microsoft.com/en-us/uwp/api/windows.foundation.datetime    
-    // ULARGE_INTEGER ul_time = ULARGE_INTEGER();
-    // ul_time.QuadPart = data->Timestamp.UniversalTime;
-    // const FILETIME fileTime = { ul_time.LowPart, ul_time.HighPart };    
+                
     auto timeInSecs = data->Timestamp.UniversalTime / (10000000);
     InsertNumber(params,"timestamp", timeInSecs);
 

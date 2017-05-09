@@ -64,23 +64,34 @@ void HttpListener::StartListening(std::function<void(const wchar_t*)> callback)
 void HttpListener::OnRequestSent(HttpDiagnosticProvider ^sender, HttpDiagnosticProviderRequestSentEventArgs ^args)
 {
  	OutputDebugStringW(L"OnRequestSent");   
-           
-    // Forced to user ReadAsBufferAsync because data->Message->Content->ReadAsStringAsync() does not work
-    // Forced to use .then because .wait and .get do not work (aplication goes to unstable state)
-    IAsyncOperationWithProgress<IBuffer^, unsigned long long>^ readOp = args->Message->Content->ReadAsBufferAsync();
-    
-    auto contentTask = create_task(readOp).then([this, args](IBuffer^ content)
-    {
-        // read from IBuffer: http://stackoverflow.com/questions/11853838/getting-an-array-of-bytes-out-of-windowsstoragestreamsibuffer
-        auto reader = ::Windows::Storage::Streams::DataReader::FromBuffer(content);
-        auto messageLenght = reader->UnconsumedBufferLength;
             
-        String^ payloadString = messageLenght > 0 ? reader->ReadString(messageLenght) : nullptr;            
-        JsonObject^ serializedMessage = _messageManager->GenerateRequestWilBeSendMessage(args, payloadString);
-        WriteLogFile(_requestSentFileName.c_str(), serializedMessage->Stringify()->Data());            
+    // only for post messages the payload is required
+    if (args->Message->Method->Method == "POST")
+    {
+        // Forced to user ReadAsBufferAsync because data->Message->Content->ReadAsStringAsync() does not work
+        // Forced to use .then because .wait and .get do not work (aplication stop processing events)
+        IAsyncOperationWithProgress<IBuffer^, unsigned long long>^ readOp = args->Message->Content->ReadAsBufferAsync();
+
+        auto contentTask = create_task(readOp).then([this, args](IBuffer^ content)
+        {
+            // read from IBuffer: http://stackoverflow.com/questions/11853838/getting-an-array-of-bytes-out-of-windowsstoragestreamsibuffer
+            auto reader = ::Windows::Storage::Streams::DataReader::FromBuffer(content);
+            auto payloadLenght = reader->UnconsumedBufferLength;            
+            String^ payload = payloadLenght > 0 ? reader->ReadString(payloadLenght) : nullptr;
+
+            JsonObject^ serializedMessage = _messageManager->GenerateRequestWilBeSendMessage(args, payload);
+            WriteLogFile(_requestSentFileName.c_str(), serializedMessage->Stringify()->Data());            
+            auto notification = wstring(L"OnRequestSent::Process Id: ") + to_wstring(_processId) + wstring(L" AbsoluteUri: ") + wstring(args->Message->RequestUri->AbsoluteUri->Data());
+            DoCallback(notification.data());
+        });    
+    }
+    else 
+    {
+        JsonObject^ serializedMessage = _messageManager->GenerateRequestWilBeSendMessage(args);
+        WriteLogFile(_requestSentFileName.c_str(), serializedMessage->Stringify()->Data());
         auto notification = wstring(L"OnRequestSent::Process Id: ") + to_wstring(_processId) + wstring(L" AbsoluteUri: ") + wstring(args->Message->RequestUri->AbsoluteUri->Data());
         DoCallback(notification.data());
-    });    
+    }
 }
 
 void HttpListener::OnResponseReceived(HttpDiagnosticProvider ^sender, HttpDiagnosticProviderResponseReceivedEventArgs ^args)
