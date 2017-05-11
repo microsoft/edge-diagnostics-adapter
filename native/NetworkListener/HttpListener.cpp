@@ -19,11 +19,14 @@ using namespace Windows::Storage::Streams;
 using namespace Windows::Foundation;
 using namespace Windows::Storage;
 
+using namespace NetworkProxyLibrary;
+
 HttpListener::HttpListener(HttpDiagnosticProvider^ provider, unsigned int processId)
 {
 	_provider = provider;
 	_processId = processId;
-    _messageManager = new MessageManager(processId);
+    _messageManager = ref new MessageManager(processId);
+    _messageManager->MessageProcessed += ref new NetworkProxyLibrary::MessageProcessedEventHandler(this, &HttpListener::OnMessageProcessed);
 
 
 	TCHAR localPath[MAX_PATH];
@@ -62,42 +65,12 @@ void HttpListener::StartListening(std::function<void(const wchar_t*)> callback)
 }
 
 void HttpListener::OnRequestSent(HttpDiagnosticProvider ^sender, HttpDiagnosticProviderRequestSentEventArgs ^args)
-{
- 	OutputDebugStringW(L"OnRequestSent");   
-            
-    // only for post messages the payload is required
-    if (args->Message->Method->Method == "POST")
-    {
-        // Forced to user ReadAsBufferAsync because data->Message->Content->ReadAsStringAsync() does not work
-        // Forced to use .then because .wait and .get do not work (aplication stop processing events)
-        IAsyncOperationWithProgress<IBuffer^, unsigned long long>^ readOp = args->Message->Content->ReadAsBufferAsync();
-
-        auto contentTask = create_task(readOp).then([this, args](IBuffer^ content)
-        {
-            // read from IBuffer: http://stackoverflow.com/questions/11853838/getting-an-array-of-bytes-out-of-windowsstoragestreamsibuffer
-            auto reader = ::Windows::Storage::Streams::DataReader::FromBuffer(content);
-            auto payloadLenght = reader->UnconsumedBufferLength;            
-            String^ payload = payloadLenght > 0 ? reader->ReadString(payloadLenght) : nullptr;
-
-            JsonObject^ serializedMessage = _messageManager->GenerateRequestWilBeSentMessage(args, payload);
-            WriteLogFile(_requestSentFileName.c_str(), serializedMessage->Stringify()->Data());            
-            auto notification = wstring(L"OnRequestSent::Process Id: ") + to_wstring(_processId) + wstring(L" AbsoluteUri: ") + wstring(args->Message->RequestUri->AbsoluteUri->Data());
-            DoCallback(notification.data());
-        });    
-    }
-    else 
-    {
-        JsonObject^ serializedMessage = _messageManager->GenerateRequestWilBeSentMessage(args);
-        WriteLogFile(_requestSentFileName.c_str(), serializedMessage->Stringify()->Data());
-        auto notification = wstring(L"OnRequestSent::Process Id: ") + to_wstring(_processId) + wstring(L" AbsoluteUri: ") + wstring(args->Message->RequestUri->AbsoluteUri->Data());
-        DoCallback(notification.data());
-    }
+{ 	
+    _messageManager->SendToProcess(ref new Message(args));
 }
 
 void HttpListener::OnResponseReceived(HttpDiagnosticProvider ^sender, HttpDiagnosticProviderResponseReceivedEventArgs ^args)
-{
-	OutputDebugStringW(L"OnResponseReceived");	 
-
+{	
     // Commented because it is failing (pending the refactor to add a message process queue)
     //JsonObject^ serializedMessage = _messageManager->GenerateResponseReceivedMessage(args);
     //WriteLogFile(_responseReceivedFileName.c_str(), serializedMessage->Stringify()->Data());
@@ -127,7 +100,7 @@ void HttpListener::OnResponseReceived(HttpDiagnosticProvider ^sender, HttpDiagno
 
 void HttpListener::OnRequestResponseCompleted(HttpDiagnosticProvider ^sender, HttpDiagnosticProviderRequestResponseCompletedEventArgs ^args)
 {
-	OutputDebugStringW(L"OnRequestResponseCompleted");
+	// OutputDebugStringW(L"OnRequestResponseCompleted");
 }
 
 void HttpListener::DoCallback(const wchar_t* notification)
@@ -179,9 +152,7 @@ void HttpListener::CreateLogFile(const wchar_t* fileName)
 }
 
 void HttpListener::WriteLogFile(const wchar_t* fileName, const wchar_t* message)
-{
-	OutputDebugStringW(L"OnRequestSent");
-
+{	
 	HANDLE hFile = CreateFile(fileName, // open file
 		FILE_APPEND_DATA,         // open for writing
 		FILE_SHARE_READ,          // allow multiple readers
@@ -209,8 +180,6 @@ void HttpListener::WriteLogFile(const wchar_t* fileName, const wchar_t* message)
 
 void HttpListener::WriteLogFile(const wchar_t* fileName, unsigned char* message, unsigned int messageLength)
 {
-	OutputDebugStringW(L"OnRequestSent");
-
 	HANDLE hFile = CreateFile(fileName, // open file
 		FILE_APPEND_DATA,         // open for writing
 		FILE_SHARE_READ,          // allow multiple readers
@@ -234,3 +203,12 @@ void HttpListener::WriteLogFile(const wchar_t* fileName, unsigned char* message,
 	CloseHandle(hFile);
 }
 
+
+
+void HttpListener::OnMessageProcessed(NetworkProxyLibrary::MessageManager ^sender, Windows::Data::Json::JsonObject ^message)
+{
+    
+    WriteLogFile(_requestSentFileName.c_str(), message->Stringify()->Data());
+    auto notification = wstring(L"OnRequestSent::Process Id: ") + to_wstring(_processId) + wstring(L" AbsoluteUri: ") + wstring(message->Stringify()->Data());
+    DoCallback(notification.data());
+}

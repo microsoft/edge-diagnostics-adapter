@@ -1,6 +1,9 @@
-#include "stdafx.h"
+﻿#include "stdafx.h"
 #include "NetworkProxyFuncs.h"
 #include "NetworkMonitor.h"
+
+using namespace NetworkProxyLibrary;
+
 static NetworkMonitor* _networkMonitor;
 int NetworkProxyFuncs::StartListeners()
 {
