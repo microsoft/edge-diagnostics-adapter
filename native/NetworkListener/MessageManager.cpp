@@ -1,20 +1,31 @@
 ﻿#include "stdafx.h"
 #include "MessageManager.h"
+#include <string>
+#include <fstream>
+#include <iostream>
+#include <locale>
+#include <codecvt>
 
+#include <collection.h>
 #include <ppltasks.h>
 
 using namespace std;
-using namespace concurrency;
+using namespace Concurrency;
+using namespace Platform::Collections;
 using namespace Windows::Foundation;
+using namespace Windows::Foundation::Collections;
 using namespace Windows::Storage::Streams;
 using namespace Windows::Web::Http;
 using namespace Platform;
 
+using namespace NetworkProxyLibrary;
+
 MessageManager::MessageManager(unsigned int processId)
 {
     _processId = processId;
-    _currentMessageCounter = 1;
+    _currentMessageCounter = 1;    
     _requestSentDictionary = ref new Map<Guid, JsonObject^>();
+    _httpMessages = ref new Vector<Message^>(); 
 }
 
 
@@ -35,6 +46,166 @@ void InsertString(JsonObject^ json, String^ key, String^ value)
 void InsertNumber(JsonObject^ json, String^ key, double  value)
 {
     json->Insert(key, JsonValue::CreateNumberValue(value));
+}
+
+void MessageManager::SendToProcess(Message^ message) 
+{
+    try
+    {
+        OutputDebugStringW(L"Enter SendToProcess \n");
+        _vectorMutex.lock();        
+        _httpMessages->Append(message);        
+        _vectorMutex.unlock();
+
+        if (_httpMessages->Size == 1 || _httpMessages->Size > 2)
+        {                      
+            OutputDebugStringW(L"Execute from SendToProcess \n");
+            this->ProcessNextMessage();                           
+        }
+        
+        auto mes = std::wstring(L"Exit SendToProcess ") + std::to_wstring(_httpMessages->Size) + std::wstring(L"\n");
+
+        OutputDebugStringW(mes.c_str());
+    }
+    catch (const std::exception& ex)
+    {
+        auto t = ex;
+    }
+}
+
+void MessageManager::PostProcessMessage(JsonObject^ jsonObject)
+{     
+    OutputDebugStringW(L"Enter PostProcessMessage \n");        
+
+    MessageProcessed(this, jsonObject);
+    // OutputDebugStringW(L"Execute ProcessNextMessage from PostProcessMessage \n");
+    // this->ProcessNextMessage();      
+
+    OutputDebugStringW(L"Exit PostProcessMessage \n");
+}
+
+void MessageManager::ProcessNextMessage()
+{
+    OutputDebugStringW(L"Enter ProcessNextMessage \n");   
+    Message^ message;
+    try
+    {
+        _vectorMutex.lock();
+        if (_httpMessages->Size > 0)
+        {
+            message = _httpMessages->GetAt(0);
+            _httpMessages->RemoveAt(0);
+            auto mes = std::wstring(L"ProcessNextMessage remove, total: ") + std::to_wstring(_httpMessages->Size) + std::wstring(L"\n");
+            OutputDebugStringW(mes.c_str());
+            _vectorMutex.unlock();
+        }
+        else
+        {
+            _vectorMutex.unlock();
+            OutputDebugStringW(L"Exit ProcessNextMessage 2 \n"); 
+            return;
+        }
+    }
+    // TODO catch specific expeption, process "not found message" exception
+    catch (const std::exception&)
+    {  
+        OutputDebugStringW(L"Exit ProcessNextMessage 3 \n"); 
+        return;
+    }
+
+    switch (message->MessageType)
+    {
+        case MessageTypes::RequestSent:                
+            ProcessRequestSentMessage(message);
+            break;
+        case MessageTypes::ResponseReceived:
+            ProcessResponseReceivedMessage(message);            
+            break;
+        case MessageTypes::RequestResponseCompleted:
+        default:
+            break;
+    }        
+
+    OutputDebugStringW(L"Exit ProcessNextMessage \n");   
+}
+
+void MessageManager::ProcessRequestSentMessage(Message ^ message)
+{
+    auto eventArgs = message->RequestSentEventArgs;
+
+    OutputDebugStringW(L"Enter ProcessRequestSentMessage \n");
+    if (eventArgs->Message->Method->Method == "POST")
+    {
+        auto contentTask = create_task(eventArgs->Message->Content->ReadAsBufferAsync()).then([this, eventArgs](IBuffer^ content)
+        {
+            // read from IBuffer: http://stackoverflow.com/questions/11853838/getting-an-array-of-bytes-out-of-windowsstoragestreamsibuffer
+            auto reader = ::Windows::Storage::Streams::DataReader::FromBuffer(content);
+            auto payloadLenght = reader->UnconsumedBufferLength;
+            String^ payload = payloadLenght > 0 ? reader->ReadString(payloadLenght) : nullptr;
+            JsonObject^ seriealizedMessage = this->GenerateRequestWilBeSentMessage(eventArgs, payload);
+            this->PostProcessMessage(seriealizedMessage);
+            OutputDebugStringW(L"Exit POST ProcessRequestSentMessage \n");                
+        }).then([this]()
+        {                
+            this->ProcessNextMessage();
+        });
+    }
+    else
+    {
+        try
+        {
+            JsonObject^ serializedMessage = this->GenerateRequestWilBeSentMessage(eventArgs);
+            this->PostProcessMessage(serializedMessage);
+        }
+        catch (const std::exception&)
+        {
+            OutputDebugStringW(L"Exception calling GenerateRequestWilBeSentMessage \n");
+        }
+        OutputDebugStringW(L"Exit ProcessRequestSentMessage \n");
+        ProcessNextMessage();
+    }
+}
+
+void MessageManager::ProcessResponseReceivedMessage(Message^ message)
+{   
+    OutputDebugStringW(L"Enter ProcessResponseReceivedMessage \n");
+   
+    JsonObject^ serializedMessage;
+    try
+    {
+        serializedMessage = this->GenerateResponseReceivedMessage(message->ResponseReceivedEventArgs);
+    }
+    catch (const std::exception&)
+    {
+        OutputDebugStringW(L"Exception calling GenerateResponseReceivedMessage \n");
+    }
+    
+    if (serializedMessage == nullptr)
+    {
+        unsigned int pendingMessages = 0;
+        if (++message->ProcessingRetries <= 3)
+        {
+            _vectorMutex.lock();
+            _httpMessages->Append(message);
+            pendingMessages = _httpMessages->Size;
+            _vectorMutex.unlock();
+        }
+        else
+        {
+            auto infoMessage = std::wstring(L"WARNING: Message not processed ") + message->MessageId.ToString()->Data() + std::wstring(L"\n");
+            OutputDebugStringW(infoMessage.c_str());
+        }
+        if (pendingMessages > 1)
+        {
+            ProcessNextMessage();
+        }
+        return;
+    }
+
+    this->PostProcessMessage(serializedMessage);
+    OutputDebugStringW(L"Exit ProcessResponseReceivedMessage \n");
+    ProcessNextMessage();
+       
 }
 
 JsonObject^ SerializeHeaders(HttpRequestMessage^ message)
@@ -90,8 +261,9 @@ JsonObject ^ MessageManager::GenerateRequestWilBeSentMessage(HttpDiagnosticProvi
     InsertString(params, "type", "Document"); // TODO: compose the type, remove hardcoded value
 
     result->Insert("params", params);    
-
+    _dictionaryMutex.lock();
     _requestSentDictionary->Insert(data->ActivityId, result);
+    _dictionaryMutex.unlock();
 
     return result;
 }
@@ -101,17 +273,19 @@ JsonObject^ MessageManager::GenerateResponseReceivedMessage(HttpDiagnosticProvid
     JsonObject^ result = ref new JsonObject();
     JsonObject^ requestMessage;
 
-    try
+    Guid id = data->ActivityId;
+    _dictionaryMutex.lock();
+    if (_requestSentDictionary->HasKey(id))
     {
-        requestMessage = _requestSentDictionary->Lookup(data->ActivityId);
+        requestMessage = _requestSentDictionary->Lookup(id);
+        _dictionaryMutex.unlock();
     }
-    catch (const  Platform::OutOfBoundsException^ ex)
+    else
     {
-        //TODO: manage the non found Guid (so no message can be done probably)
+        _dictionaryMutex.unlock();
         return nullptr;
     }
-    auto t = data->Message->RequestMessage;
-    auto e = t->Method->Method;
+    
     HttpResponseMessage^ message = data->Message;
     
     InsertString(result, "method", "Network.responseReceived");
@@ -126,3 +300,4 @@ JsonObject^ MessageManager::GenerateResponseReceivedMessage(HttpDiagnosticProvid
     
     return result;
 }
+

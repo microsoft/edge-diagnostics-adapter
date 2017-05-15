@@ -1,4 +1,4 @@
-#include "stdafx.h"
+﻿#include "stdafx.h"
 #include "NetworkMonitor.h"
 
 #include "HttpListener.h"
@@ -11,10 +11,11 @@ using namespace Windows::System::Diagnostics;
 using namespace Windows::Web::Http::Diagnostics;
 using namespace Windows::Foundation::Collections;
 
+using namespace NetworkProxyLibrary;
+
 NetworkMonitor::NetworkMonitor()
 {
 }
-
 
 NetworkMonitor::~NetworkMonitor()
 {
