@@ -70,32 +70,8 @@ void HttpListener::OnRequestSent(HttpDiagnosticProvider ^sender, HttpDiagnosticP
 }
 
 void HttpListener::OnResponseReceived(HttpDiagnosticProvider ^sender, HttpDiagnosticProviderResponseReceivedEventArgs ^args)
-{	
-    // Commented because it is failing (pending the refactor to add a message process queue)
-    //JsonObject^ serializedMessage = _messageManager->GenerateResponseReceivedMessage(args);
-    //WriteLogFile(_responseReceivedFileName.c_str(), serializedMessage->Stringify()->Data());
-
-    //auto notification = wstring(L"OnResponseReceivedMessage::Process Id: ") + to_wstring(_processId);
-    //DoCallback(notification.data());
-
-    IAsyncOperationWithProgress<IBuffer^, unsigned long long>^ readOp = args->Message->Content->ReadAsBufferAsync();
-    create_task(readOp).then([this](IBuffer^ content)
-    {
-        // read from IBuffer: http://stackoverflow.com/questions/11853838/getting-an-array-of-bytes-out-of-windowsstoragestreamsibuffer
-        auto reader = ::Windows::Storage::Streams::DataReader::FromBuffer(content);
-
-        auto messageLenght = reader->UnconsumedBufferLength;
-
-        std::vector<unsigned char> data(messageLenght);
-
-        if (!data.empty())
-            reader->ReadBytes(
-                ::Platform::ArrayReference<unsigned char>(
-                    &data[0], data.size()));
-
-        WriteLogFile(_responseReceivedFileName.data(), data.data(), messageLenght);
-
-    });
+{
+    _messageManager->SendToProcess(ref new Message(args));    
 }
 
 void HttpListener::OnRequestResponseCompleted(HttpDiagnosticProvider ^sender, HttpDiagnosticProviderRequestResponseCompletedEventArgs ^args)
@@ -207,8 +183,14 @@ void HttpListener::WriteLogFile(const wchar_t* fileName, unsigned char* message,
 
 void HttpListener::OnMessageProcessed(NetworkProxyLibrary::MessageManager ^sender, Windows::Data::Json::JsonObject ^message)
 {
-    
-    WriteLogFile(_requestSentFileName.c_str(), message->Stringify()->Data());
+    if (message->GetNamedString("method") == "Network.requestWillBeSent")
+    {
+        WriteLogFile(_requestSentFileName.c_str(), message->Stringify()->Data());
+    }
+    if (message->GetNamedString("method") == "Network.responseReceived")
+    {
+        WriteLogFile(_responseReceivedFileName.c_str(), message->Stringify()->Data());
+    }
     auto notification = wstring(L"OnRequestSent::Process Id: ") + to_wstring(_processId) + wstring(L" AbsoluteUri: ") + wstring(message->Stringify()->Data());
     DoCallback(notification.data());
 }

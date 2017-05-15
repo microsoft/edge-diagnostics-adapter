@@ -4,6 +4,7 @@
 #include <vector>
 #include <mutex>
 #include <collection.h>
+#include <atomic>
 
 using namespace Platform;
 using namespace Platform::Collections;
@@ -52,6 +53,7 @@ namespace NetworkProxyLibrary
         }        
         property MessageTypes MessageType { MessageTypes get() { return _messageType; } }
         property Guid MessageId { Guid get() { return _messageId; } }
+        property int ProcessingRetries;
         property HttpDiagnosticProviderRequestSentEventArgs^ RequestSentEventArgs { HttpDiagnosticProviderRequestSentEventArgs^ get() { return _requestSentEventArgs; }}
         property HttpDiagnosticProviderResponseReceivedEventArgs^ ResponseReceivedEventArgs { HttpDiagnosticProviderResponseReceivedEventArgs^ get() { return _responseReceivedEventArgs; }}
         property HttpDiagnosticProviderRequestResponseCompletedEventArgs^ RequestResponseCompletedEventArgs { HttpDiagnosticProviderRequestResponseCompletedEventArgs^ get() { return _requestResponseCompletedEventArgs; }}
@@ -60,6 +62,7 @@ namespace NetworkProxyLibrary
         void Init(Guid id)
         {
             _messageId = id;
+            ProcessingRetries = 0;
         }
         MessageTypes _messageType;
         Guid _messageId;
@@ -79,8 +82,9 @@ namespace NetworkProxyLibrary
         
         JsonObject^ GenerateRequestWilBeSentMessage(HttpDiagnosticProviderRequestSentEventArgs ^data, String^ postPayload = nullptr);
         JsonObject^ GenerateResponseReceivedMessage(HttpDiagnosticProviderResponseReceivedEventArgs^ data);            
-        void PostProcessMessage(JsonObject^ jsonObject, Guid messageId, MessageTypes messageType);
+        void PostProcessMessage(JsonObject^ jsonObject);
         event MessageProcessedEventHandler^ MessageProcessed;
+        void ProcessNextMessage();
 
     private:        
         ~MessageManager();
@@ -90,10 +94,11 @@ namespace NetworkProxyLibrary
         Map<Guid, JsonObject^>^ _requestSentDictionary;
         Vector<Message^>^ _httpMessages;                        
         std::mutex _vectorMutex;
+        std::mutex _dictionaryMutex;                
 
-        String^ GetNextSequenceId(IdTypes counterType);
-        void ProcessNextMessage(); 
-        void ProcessRequestSentMessage(Message^ message);                      
+        String^ GetNextSequenceId(IdTypes counterType);       ; 
+        void ProcessRequestSentMessage(Message^ message);
+        void ProcessResponseReceivedMessage(Message^ message);
     };
 
 }
