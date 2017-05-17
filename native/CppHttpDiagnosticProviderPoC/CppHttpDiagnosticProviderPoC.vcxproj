@@ -113,6 +113,10 @@
     <Link>
       <SubSystem>Windows</SubSystem>
     </Link>
+    <PostBuildEvent>
+      <Command>copy /Y "$(OutDir)$(ProjectName).exe" "$(SolutionDir)..\out\lib\$(ProjectName).exe"
+copy /Y "$(OutDir)$(ProjectName).pdb" "$(SolutionDir)..\out\lib\$(ProjectName).pdb"</Command>
+    </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <ClCompile>

@@ -4,6 +4,7 @@
 #include "stdafx.h"
 #include "CppHttpDiagnosticProviderPoC.h"
 #include <functional>
+#include <memory>
 
 /***added extra************************************************/
 typedef int( *LPFNDLLFUNC1) ();
@@ -16,6 +17,9 @@ using namespace std;
 
 /*************************************************************/
 
+#define WM_NETWORKPROXY WM_USER + 1
+#define WM_COPYDATA 0x004A
+
 #define MAX_LOADSTRING 100
 
 // Global Variables:
@@ -27,6 +31,8 @@ HINSTANCE hinstDLL;
 LPFNDLLFUNC1 HelloWorld;
 LPFNDLLFUNC2 StartListenersMethod;
 BOOL fFreeDLL;
+
+HWND m_serverHwnd;
 
 
 // Forward declarations of functions included in this code module:
@@ -156,6 +162,54 @@ BOOL InitInstance(HINSTANCE hInstance, int nCmdShow)
    return TRUE;
 }
 
+#pragma pack(push, 1)
+struct CopyDataPayload_StringMessage_Data
+{
+    UINT uMessageOffset;
+};
+#pragma pack(pop)
+
+void FreeCopyDataStructCopy(_In_ PCOPYDATASTRUCT pCopyDataStructCopy)
+{
+    delete[](BYTE*) pCopyDataStructCopy->lpData;
+    delete pCopyDataStructCopy;
+}
+
+PCOPYDATASTRUCT MakeCopyDataStructCopy(_In_ const PCOPYDATASTRUCT pCopyDataStruct)
+{
+    PCOPYDATASTRUCT const pCopyDataStructCopy = new COPYDATASTRUCT;
+    pCopyDataStructCopy->dwData = pCopyDataStruct->dwData;
+    pCopyDataStructCopy->cbData = pCopyDataStruct->cbData;
+    pCopyDataStructCopy->lpData = new BYTE[pCopyDataStructCopy->cbData];
+
+    ::CopyMemory(pCopyDataStructCopy->lpData, pCopyDataStruct->lpData, pCopyDataStructCopy->cbData);
+
+    return pCopyDataStructCopy;
+}
+
+void OnMessageFromWebSocket(UINT nMsg, WPARAM wParam, LPARAM lParam)
+{       
+    // CString message;
+    m_serverHwnd = reinterpret_cast<HWND>(wParam);
+    // Scope for the copied data
+    {
+        // Take ownership of the copydata struct memory
+        //unique_ptr<COPYDATASTRUCT, void(*)(COPYDATASTRUCT*)> spParams(reinterpret_cast<PCOPYDATASTRUCT>(lParam), ::FreeCopyDataStructCopy);
+
+        PCOPYDATASTRUCT pCopyDataStruct = reinterpret_cast<PCOPYDATASTRUCT>(lParam);
+        
+        // Copy the data so that we can post message to ourselves and unblock the SendMessage caller
+        unique_ptr<COPYDATASTRUCT, void(*)(COPYDATASTRUCT*)> spParams(::MakeCopyDataStructCopy(pCopyDataStruct), ::FreeCopyDataStructCopy);
+        
+        PCOPYDATASTRUCT pParams = spParams.release();
+
+        // Get the string message from the structure
+        CopyDataPayload_StringMessage_Data* pMessage = reinterpret_cast<CopyDataPayload_StringMessage_Data*>(pParams->lpData);
+        LPCWSTR lpString = reinterpret_cast<LPCWSTR>(reinterpret_cast<BYTE*>(pMessage) + pMessage->uMessageOffset);
+        // message = lpString;
+    }
+}
+
 //
 //  FUNCTION: WndProc(HWND, UINT, WPARAM, LPARAM)
 //
@@ -168,6 +222,7 @@ BOOL InitInstance(HINSTANCE hInstance, int nCmdShow)
 //
 LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 {
+    
     switch (message)
     {
     case WM_COMMAND:
@@ -179,7 +234,9 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
             case IDM_ABOUT:
                 //DialogBox(hInst, MAKEINTRESOURCE(IDD_ABOUTBOX), hWnd, About);
 				// Windows::System::Launcher::LaunchUriAsync(ref new Windows::Foundation::Uri(L"https://blogs.windows.com/buildingapps//"));
-				StartListeningEdge();
+                //::MessageBox(nullptr, L"IDM_ABOUT", L"Message", 0);
+				//StartListeningEdge();
+                ::SendMessage(m_serverHwnd, WM_COPYDATA, reinterpret_cast<WPARAM>(m_serverHwnd), NULL);
                 break;
             case IDM_EXIT:
                 DestroyWindow(hWnd);
@@ -200,7 +257,17 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
     case WM_DESTROY:
         PostQuitMessage(0);
         break;
+    case WM_NETWORKPROXY:
+        ::MessageBox(nullptr, L"WM_NETWORKPROXY", L"Message", 0);
+        break;
+    case WM_COPYDATA:
+        OnMessageFromWebSocket(message, wParam, lParam);
+        //::MessageBox(nullptr, L"WM_COPYDATA", L"Message", 0);
+
+        break;
+
     default:
+        
         return DefWindowProc(hWnd, message, wParam, lParam);
     }
     return 0;

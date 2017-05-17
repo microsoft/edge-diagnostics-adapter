@@ -1,4 +1,4 @@
-//
+﻿//
 // Copyright (C) Microsoft. All rights reserved.
 //
 
@@ -42,7 +42,8 @@ export module EdgeAdapter {
         private _serverPort: number;
         private _chromeToolsPort: number;
         private _guidToIdMap: Map<string, string> = new Map<string, string>();
-        private _idToEdgeMap: Map<string, edgeAdapter.EdgeInstanceId> = new Map<string, edgeAdapter.EdgeInstanceId>();
+        private _idToEdgeMap: Map<string, edgeAdapter.EdgeInstanceId> = new Map<string, edgeAdapter.EdgeInstanceId>();        
+        private _idToNetWorkProxyMap: Map<string, edgeAdapter.NetworkProxyInstanceId> = new Map<string,edgeAdapter.NetworkProxyInstanceId>();
         private _edgeToWSMap: Map<edgeAdapter.EdgeInstanceId, ws[]> = new Map<edgeAdapter.EdgeInstanceId, ws[]>();
         private _diagLogging: boolean = false;
 
@@ -154,17 +155,18 @@ export module EdgeAdapter {
 
             let succeeded = false;
             let instanceId: edgeAdapter.EdgeInstanceId = null;
+            let networkInstanceId: edgeAdapter.NetworkProxyInstanceId = null;
 
             if (this._guidToIdMap.has(guid)) {
                 const id = this._guidToIdMap.get(guid);
-                instanceId = this._idToEdgeMap.get(id);
+                instanceId = this._idToEdgeMap.get(id);                
                 if (!instanceId) {
                     // New connection
-                    instanceId = edgeAdapter.connectTo(id);
+                    instanceId = edgeAdapter.connectTo(id);                                                           
                     if (instanceId) {
                         this.injectAdapterFiles(instanceId);
                         this._idToEdgeMap.set(id, instanceId);
-                        this._edgeToWSMap.set(instanceId, [ws]);
+                        this._edgeToWSMap.set(instanceId, [ws]);                                              
                         succeeded = true;
                     }
                 } else {
@@ -174,15 +176,25 @@ export module EdgeAdapter {
                     this._edgeToWSMap.set(instanceId, sockets);
                     succeeded = true;
                 }
+                networkInstanceId = this._idToNetWorkProxyMap.get(id);
+                if(!networkInstanceId){                    
+                    networkInstanceId = edgeAdapter.createNetworkProxyFor(id);
+                    if(networkInstanceId){
+                        this._idToNetWorkProxyMap.set(id, networkInstanceId);
+                    }
+                }
             }
 
-            if (succeeded) {
+            if (succeeded && networkInstanceId) {
                 // Forward messages to the proxy
                 ws.on('message', (msg) => {
                     if (this._diagLogging) {
                         console.log("Client:", instanceId, msg);
-                    }
-                    edgeAdapter.forwardTo(instanceId, msg);
+                    }                    
+                    //TODO: decide if the message will be for edge or for the network proxy and send it to the proper id
+                    edgeAdapter.forwardTo(networkInstanceId, msg);
+                    // Look message type and use forwardTo to instanceId or instanceNetworkId
+                    edgeAdapter.forwardTo(instanceId, msg);                    
                 });
 
                 const removeSocket = (instanceId: edgeAdapter.EdgeInstanceId) => {
