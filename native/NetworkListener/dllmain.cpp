@@ -1,51 +1,20 @@
-// dllmain.cpp : Defines the entry point for the DLL application.
-
+﻿// dllmain.cpp : Defines the entry point for the DLL application.
 #include "stdafx.h"
-#include "resource.h"
-#include "dllmain.h"
 
-CNetworkListenerModule _AtlModule;
-/* commented to avoid references to EdgeAdapter.DebuggerCore 
-extern "C" void RegisterDebuggerAtlTypeLib(_In_ int typelibIndex); */
-
-// DLL Entry Point
-extern "C" BOOL WINAPI DllMain(HINSTANCE hInstance, DWORD dwReason, LPVOID lpReserved)
+BOOL APIENTRY DllMain(HMODULE hModule,
+    DWORD  ul_reason_for_call,
+    LPVOID lpReserved
+)
 {
-	UNREFERENCED_PARAMETER(hInstance);
-
-	// Register the DebuggerDispatch as the second typelib in our dll
-	// ::RegisterDebuggerAtlTypeLib(2);
-
-	return _AtlModule.DllMain(dwReason, lpReserved);
+    switch (ul_reason_for_call)
+    {
+    case DLL_PROCESS_ATTACH:
+    case DLL_THREAD_ATTACH:
+    case DLL_THREAD_DETACH:
+    case DLL_PROCESS_DETACH:
+        break;
+    }
+    return TRUE;
 }
 
-// Used to determine whether the DLL can be unloaded by OLE.
-STDAPI DllCanUnloadNow(void)
-{
-	return _AtlModule.DllCanUnloadNow();
-}
-
-// Returns a class factory to create an object of the requested type.
-STDAPI DllGetClassObject(_In_ REFCLSID rclsid, _In_ REFIID riid, _Outptr_ LPVOID* ppv)
-{
-	return _AtlModule.DllGetClassObject(rclsid, riid, ppv);
-}
-
-// DllRegisterServer - Adds entries to the system registry.
-STDAPI DllRegisterServer(void)
-{
-	return _AtlModule.DllRegisterServer();
-}
-
-// DllUnregisterServer - Removes entries from the system registry.
-STDAPI DllUnregisterServer(void)
-{
-	return _AtlModule.DllUnregisterServer();
-}
-
-// DllInstall - Adds/Removes entries to the system registry per user per machine.
-STDAPI DllInstall(BOOL bInstall, _In_opt_ LPCWSTR pszCmdLine)
-{
-	return E_NOTIMPL;
-}
 

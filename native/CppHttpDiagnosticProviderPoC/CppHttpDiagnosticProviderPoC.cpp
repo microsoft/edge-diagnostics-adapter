@@ -1,24 +1,21 @@
-// CppHttpDiagnosticProviderPoC.cpp : Defines the entry point for the application.
+﻿// CppHttpDiagnosticProviderPoC.cpp : Defines the entry point for the application.
 //
 
 #include "stdafx.h"
 #include "CppHttpDiagnosticProviderPoC.h"
+#include "NetworkMonitor.h";
 #include <functional>
 #include <memory>
-
-/***added extra************************************************/
-typedef int( *LPFNDLLFUNC1) ();
-typedef int( *LPFNDLLFUNC2) (std::function<void(const wchar_t*)>);
 
 #include <functional>
 
 using namespace std;
+using namespace NetworkProxyLibrary;
 
 
 /*************************************************************/
-
-#define WM_NETWORKPROXY WM_USER + 1
 #define WM_COPYDATA 0x004A
+#define WM_PROCESSCOPYDATA WM_USER + 1
 
 #define MAX_LOADSTRING 100
 
@@ -27,9 +24,8 @@ HINSTANCE hInst;                                // current instance
 WCHAR szTitle[MAX_LOADSTRING];                  // The title bar text
 WCHAR szWindowClass[MAX_LOADSTRING];            // the main window class name
 
+NetworkMonitor* networkMonitor;
 HINSTANCE hinstDLL;
-LPFNDLLFUNC1 HelloWorld;
-LPFNDLLFUNC2 StartListenersMethod;
 BOOL fFreeDLL;
 
 HWND m_serverHwnd;
@@ -83,23 +79,8 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 
 void StartListeningEdge()
 {
-	// check local path for debugging
-	TCHAR localPath[MAX_PATH];
-	GetCurrentDirectory(MAX_PATH, localPath);	
-	hinstDLL = LoadLibrary(L"NetworkListener.dll");
-
-	if (hinstDLL != NULL)
-	{		
-		//TODO: change library to use undecorated names
-		StartListenersMethod = (LPFNDLLFUNC2)GetProcAddress(hinstDLL, "?StartListenersWithCallback@NetworkProxyFuncs@@SAHV?$function@$$A6AXPEB_W@Z@std@@@Z");
-		int result = 0;
-		if (StartListenersMethod != NULL)
-		{
-			result = StartListenersMethod(OnMessageReceived);			
-		}
-
-		// fFreeDLL = FreeLibrary(hinstDLL);
-	}
+    networkMonitor = new NetworkMonitor();
+    networkMonitor->StartListeningAllEdgeProcesses(&OnMessageReceived);	
 }
 
 void OnMessageReceived(const wchar_t* message)
@@ -237,6 +218,8 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
                 //::MessageBox(nullptr, L"IDM_ABOUT", L"Message", 0);
 				//StartListeningEdge();
                 ::SendMessage(m_serverHwnd, WM_COPYDATA, reinterpret_cast<WPARAM>(m_serverHwnd), NULL);
+                //::SendMessage(m_serverHwnd, WM_PROCESSCOPYDATA, reinterpret_cast<WPARAM>(m_serverHwnd), NULL);
+                
                 break;
             case IDM_EXIT:
                 DestroyWindow(hWnd);
@@ -257,7 +240,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
     case WM_DESTROY:
         PostQuitMessage(0);
         break;
-    case WM_NETWORKPROXY:
+    case WM_PROCESSCOPYDATA:
         ::MessageBox(nullptr, L"WM_NETWORKPROXY", L"Message", 0);
         break;
     case WM_COPYDATA:
