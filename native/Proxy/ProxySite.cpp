@@ -301,7 +301,6 @@ HRESULT ProxySite::CreateEngine(_In_ CComBSTR& id)
     }
     else
     {
-        this->StartListeningEdge();
         // Create a new engine on this thread
         ATLENSURE_RETURN_VAL(m_browserEngines.find(id) == m_browserEngines.end(), -1);
 
@@ -414,32 +413,4 @@ static DWORD WINAPI DebuggerThreadProc(_In_ LPVOID pThreadParam)
     }
 
     return 0;
-}
-
-void ProxySite::StartListeningEdge()
-{
-    TCHAR localPath[MAX_PATH];
-    GetCurrentDirectory(MAX_PATH, localPath);
-    //TODO: find the path to the library dinamycally (should be the same as for the Proxy64.dll)
-    hinstDLL = LoadLibrary(_T("C:\\Work\\PlainEdgeAdapter\\out\\lib\\NetworkListener.dll"));
-
-    if (hinstDLL != NULL)
-    {        
-        //TODO: use undecorated names
-        StartListenersMethod = (LPFNDLLFUNC)GetProcAddress(hinstDLL, "?StartListenersWithCallback@NetworkProxyFuncs@@SAHV?$function@$$A6AXPEB_W@Z@std@@@Z");
-        int result = 0;
-        if (StartListenersMethod != NULL)
-        {
-            // TODO: use callback as parameter
-            // result = StartListenersMethod(OnMessageReceived);
-            result = StartListenersMethod(nullptr);
-        }
-
-        // fFreeDLL = FreeLibrary(hinstDLL);
-    }
-}
-
-void ProxySite::OnMessageReceived(const wchar_t* message)
-{
-    auto msg = message;
 }

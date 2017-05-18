@@ -16,7 +16,7 @@ namespace NetworkProxyLibrary
         int StartListeningAllEdgeProcesses(std::function<void(const wchar_t*)> callback);
 
     private:
-        HttpListener^ httpListeners[10];
+        HttpListener^ _httpListeners[10];
 
     };
 }

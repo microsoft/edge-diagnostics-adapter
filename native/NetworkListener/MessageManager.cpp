@@ -17,7 +17,6 @@ using namespace Windows::Foundation::Collections;
 using namespace Windows::Storage::Streams;
 using namespace Windows::Web::Http;
 using namespace Platform;
-
 using namespace NetworkProxyLibrary;
 
 MessageManager::MessageManager(unsigned int processId)

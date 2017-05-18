@@ -47,7 +47,7 @@ int NetworkMonitor::StartListeningAllEdgeProcesses(std::function<void(const wcha
 		{
 			auto processInfo = edgeProcesses[processCounter];
 			HttpDiagnosticProvider^ diagnosticProvider = HttpDiagnosticProvider::CreateFromProcessDiagnosticInfo(processInfo);
-			httpListeners[processCounter] = ref new HttpListener(diagnosticProvider, processInfo->ProcessId);
+			_httpListeners[processCounter] = ref new HttpListener(diagnosticProvider, processInfo->ProcessId);
 			processCounter++;
 		}
 		catch (const std::exception& ex)
@@ -59,7 +59,7 @@ int NetworkMonitor::StartListeningAllEdgeProcesses(std::function<void(const wcha
 	processCounter = 0;
 	while (edgeProcesses[processCounter] != nullptr)
 	{
-		httpListeners[processCounter]->StartListening(callback);
+		_httpListeners[processCounter]->StartListening(callback);
 		processCounter++;
 	}
 

@@ -24,10 +24,7 @@ HINSTANCE hInst;                                // current instance
 WCHAR szTitle[MAX_LOADSTRING];                  // The title bar text
 WCHAR szWindowClass[MAX_LOADSTRING];            // the main window class name
 
-NetworkMonitor* networkMonitor;
-HINSTANCE hinstDLL;
-BOOL fFreeDLL;
-
+NetworkMonitor* m_networkMonitor;
 HWND m_serverHwnd;
 
 
@@ -79,8 +76,8 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 
 void StartListeningEdge()
 {
-    networkMonitor = new NetworkMonitor();
-    networkMonitor->StartListeningAllEdgeProcesses(&OnMessageReceived);	
+    m_networkMonitor = new NetworkMonitor();
+    m_networkMonitor->StartListeningAllEdgeProcesses(&OnMessageReceived);	
 }
 
 void OnMessageReceived(const wchar_t* message)
