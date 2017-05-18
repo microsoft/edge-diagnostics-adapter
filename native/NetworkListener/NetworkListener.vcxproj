@@ -40,7 +40,7 @@
     <CharacterSet>Unicode</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
-    <ConfigurationType>DynamicLibrary</ConfigurationType>
+    <ConfigurationType>StaticLibrary</ConfigurationType>
     <UseDebugLibraries>true</UseDebugLibraries>
     <PlatformToolset>v141</PlatformToolset>
     <CharacterSet>Unicode</CharacterSet>
@@ -75,8 +75,8 @@
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <LinkIncremental>true</LinkIncremental>
-    <IntDir>out\intermediate\$(Platform)\$(Configuration)\</IntDir>
-    <OutDir>out\$(Platform)\$(Configuration)\</OutDir>
+    <IntDir>..\..\out\native\network\intermediate\$(Configuration)\$(Platform)\$(ProjectName)\</IntDir>
+    <OutDir>..\..\out\native\network\$(Configuration)\$(Platform)\</OutDir>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <LinkIncremental>false</LinkIncremental>
@@ -127,10 +127,7 @@
       <AdditionalIncludeDirectories>$(OutDir);</AdditionalIncludeDirectories>
     </ResourceCompile>
     <PostBuildEvent>
-      <Command>copy /Y "$(OutDir)$(ProjectName).dll" "$(SolutionDir)..\out\lib\$(ProjectName).dll"
-copy /Y "$(OutDir)$(ProjectName).pdb" "$(SolutionDir)..\out\lib\$(ProjectName).pdb"
-copy /Y "$(OutDir)$(ProjectName).dll" "$(SolutionDir)\CppHttpDiagnosticProviderPoC\out\x64\Debug\$(ProjectName).dll"
-copy /Y "$(OutDir)$(ProjectName).pdb" "$(SolutionDir)\CppHttpDiagnosticProviderPoC\out\x64\Debug\$(ProjectName).pdb"
+      <Command>
 </Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
@@ -180,20 +177,14 @@ copy /Y "$(OutDir)$(ProjectName).pdb" "$(SolutionDir)\CppHttpDiagnosticProviderP
     <Text Include="ReadMe.txt" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="dllmain.h" />
     <ClInclude Include="HttpListener.h" />
     <ClInclude Include="MessageManager.h" />
     <ClInclude Include="NetworkMonitor.h" />
-    <ClInclude Include="NetworkProxyFuncs.h" />
     <ClInclude Include="resource.h" />
     <ClInclude Include="stdafx.h" />
     <ClInclude Include="targetver.h" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="$(OutDir)\NetworkListener_i.c">
-      <PrecompiledHeader>NotUsing</PrecompiledHeader>
-      <CompileAsWinRT Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</CompileAsWinRT>
-    </ClCompile>
     <ClCompile Include="dllmain.cpp">
       <CompileAsManaged Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">false</CompileAsManaged>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
@@ -212,26 +203,12 @@ copy /Y "$(OutDir)$(ProjectName).pdb" "$(SolutionDir)\CppHttpDiagnosticProviderP
     <ClCompile Include="MessageManager.cpp" />
     <ClCompile Include="NetworkListener.cpp" />
     <ClCompile Include="NetworkMonitor.cpp" />
-    <ClCompile Include="NetworkProxyFuncs.cpp" />
     <ClCompile Include="stdafx.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Create</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Create</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Create</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Create</PrecompiledHeader>
     </ClCompile>
-  </ItemGroup>
-  <ItemGroup>
-    <None Include="NetworkListener.def" />
-  </ItemGroup>
-  <ItemGroup>
-    <Midl Include="NetworkListener.idl">
-      <TypeLibraryName>$(ProjectName).tlb</TypeLibraryName>
-    </Midl>
-  </ItemGroup>
-  <ItemGroup>
-    <ResourceCompile Include="resource.rc">
-      <AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(OutDir);$(IntDir)</AdditionalIncludeDirectories>
-    </ResourceCompile>
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

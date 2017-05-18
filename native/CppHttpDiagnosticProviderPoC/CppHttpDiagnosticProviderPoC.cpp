@@ -1,20 +1,21 @@
-// CppHttpDiagnosticProviderPoC.cpp : Defines the entry point for the application.
+﻿// CppHttpDiagnosticProviderPoC.cpp : Defines the entry point for the application.
 //
 
 #include "stdafx.h"
+#include "Strsafe.h"
 #include "CppHttpDiagnosticProviderPoC.h"
+#include "NetworkMonitor.h";
 #include <functional>
-
-/***added extra************************************************/
-typedef int( *LPFNDLLFUNC1) ();
-typedef int( *LPFNDLLFUNC2) (std::function<void(const wchar_t*)>);
-
-#include <functional>
+#include <memory>
+#include <string>
 
 using namespace std;
+using namespace NetworkProxyLibrary;
 
 
 /*************************************************************/
+#define WM_COPYDATA 0x004A
+#define WM_PROCESSCOPYDATA WM_USER + 1
 
 #define MAX_LOADSTRING 100
 
@@ -23,10 +24,8 @@ HINSTANCE hInst;                                // current instance
 WCHAR szTitle[MAX_LOADSTRING];                  // The title bar text
 WCHAR szWindowClass[MAX_LOADSTRING];            // the main window class name
 
-HINSTANCE hinstDLL;
-LPFNDLLFUNC1 HelloWorld;
-LPFNDLLFUNC2 StartListenersMethod;
-BOOL fFreeDLL;
+NetworkMonitor* m_networkMonitor;
+HWND m_serverHwnd;
 
 
 // Forward declarations of functions included in this code module:
@@ -35,6 +34,7 @@ BOOL                InitInstance(HINSTANCE, int);
 LRESULT CALLBACK    WndProc(HWND, UINT, WPARAM, LPARAM);
 INT_PTR CALLBACK    About(HWND, UINT, WPARAM, LPARAM);
 void OnMessageReceived(const wchar_t* message);
+void SendMessageToWebSocket(_In_ const wchar_t* message);
 
 int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
                      _In_opt_ HINSTANCE hPrevInstance,
@@ -74,33 +74,10 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
     return (int) msg.wParam;
 }
 
-
-void StartListeningEdge()
-{
-	// check local path for debugging
-	TCHAR localPath[MAX_PATH];
-	GetCurrentDirectory(MAX_PATH, localPath);	
-	hinstDLL = LoadLibrary(L"NetworkListener.dll");
-
-	if (hinstDLL != NULL)
-	{		
-		//TODO: change library to use undecorated names
-		StartListenersMethod = (LPFNDLLFUNC2)GetProcAddress(hinstDLL, "?StartListenersWithCallback@NetworkProxyFuncs@@SAHV?$function@$$A6AXPEB_W@Z@std@@@Z");
-		int result = 0;
-		if (StartListenersMethod != NULL)
-		{
-			result = StartListenersMethod(OnMessageReceived);			
-		}
-
-		// fFreeDLL = FreeLibrary(hinstDLL);
-	}
-}
-
 void OnMessageReceived(const wchar_t* message)
 {
-	auto msg = message;
+    SendMessageToWebSocket(message);
 }
-
 
 //
 //  FUNCTION: MyRegisterClass()
@@ -156,6 +133,112 @@ BOOL InitInstance(HINSTANCE hInstance, int nCmdShow)
    return TRUE;
 }
 
+//TODO: remove it because it is duplicated code and include Messages.h to use original copy
+#pragma pack(push, 1)
+struct CopyDataPayload_StringMessage_Data
+{
+    UINT uMessageOffset;
+};
+#pragma pack(pop)
+
+//TODO: remove it because it is duplicated code and include Messages.h to use original copy
+void FreeCopyDataStructCopy(_In_ PCOPYDATASTRUCT pCopyDataStructCopy)
+{
+    delete[](BYTE*) pCopyDataStructCopy->lpData;
+    delete pCopyDataStructCopy;
+}
+
+//TODO: remove it because it is duplicated code and include Messages.h to use original copy
+PCOPYDATASTRUCT MakeCopyDataStructCopy(_In_ const PCOPYDATASTRUCT pCopyDataStruct)
+{
+    PCOPYDATASTRUCT const pCopyDataStructCopy = new COPYDATASTRUCT;
+    pCopyDataStructCopy->dwData = pCopyDataStruct->dwData;
+    pCopyDataStructCopy->cbData = pCopyDataStruct->cbData;
+    pCopyDataStructCopy->lpData = new BYTE[pCopyDataStructCopy->cbData];
+
+    ::CopyMemory(pCopyDataStructCopy->lpData, pCopyDataStruct->lpData, pCopyDataStructCopy->cbData);
+
+    return pCopyDataStructCopy;
+}
+
+//TODO: remove it because it is duplicated code and include Messages.h to use original copy
+enum CopyDataPayload_ProcSignature : ULONG_PTR
+{
+    StringMessage_Signature
+};
+
+void OnMessageFromWebSocket(UINT nMsg, WPARAM wParam, LPARAM lParam)
+{           
+    m_serverHwnd = reinterpret_cast<HWND>(wParam);
+    // Scope for the copied data
+    {
+
+        PCOPYDATASTRUCT pCopyDataStruct = reinterpret_cast<PCOPYDATASTRUCT>(lParam);
+        
+        // Copy the data so that we can handle the message and unblock the SendMessage caller
+        unique_ptr<COPYDATASTRUCT, void(*)(COPYDATASTRUCT*)> spParams(::MakeCopyDataStructCopy(pCopyDataStruct), ::FreeCopyDataStructCopy);
+        
+        PCOPYDATASTRUCT pParams = spParams.release();
+
+        // Get the string message from the structure
+        CopyDataPayload_StringMessage_Data* pMessage = reinterpret_cast<CopyDataPayload_StringMessage_Data*>(pParams->lpData);
+        LPCWSTR lpString = reinterpret_cast<LPCWSTR>(reinterpret_cast<BYTE*>(pMessage) + pMessage->uMessageOffset);
+
+        wstring test = wstring(lpString);
+        if (test.find(L"\"method\":\"Network.enable\"") != string::npos) 
+        {
+            if (m_networkMonitor == nullptr)
+            {
+                m_networkMonitor = new NetworkMonitor();
+            }
+            m_networkMonitor->StartListeningAllEdgeProcesses(&OnMessageReceived);
+        }
+        else if (test.find(L"\"method\":\"Network.disable\"") != string::npos)
+        {
+            m_networkMonitor->StopListeningEdgeProcesses();
+        }      
+    }
+}
+
+void SendMessageToWebSocket(_In_ const wchar_t* message)
+{
+    if (m_serverHwnd == nullptr)
+    {
+        OutputDebugStringW(L"CppHttpDiagnosticProviderPoC::SendMessageToWebSocket-> Pointer to the wecksocket window is null. \n");
+        return;
+    }
+    const size_t ucbParamsSize = sizeof(CopyDataPayload_StringMessage_Data);
+    const size_t ucbStringSize = sizeof(WCHAR) * (::wcslen(message) + 1);
+    const size_t ucbBufferSize = ucbParamsSize + ucbStringSize;
+    std::unique_ptr<BYTE> pBuffer;
+    try
+    {
+        pBuffer.reset(new BYTE[ucbBufferSize]);
+    }
+    catch (std::bad_alloc&)
+    {
+        OutputDebugStringW(L"CppHttpDiagnosticProviderPoC::SendMessageToWebSocket-> Out of memory exception. \n");
+        return;
+    }
+
+    COPYDATASTRUCT copyData;
+    copyData.dwData = CopyDataPayload_ProcSignature::StringMessage_Signature;
+    copyData.cbData = static_cast<DWORD>(ucbBufferSize);
+    copyData.lpData = pBuffer.get();
+
+    CopyDataPayload_StringMessage_Data* pData = reinterpret_cast<CopyDataPayload_StringMessage_Data*>(pBuffer.get());
+    pData->uMessageOffset = static_cast<UINT>(ucbParamsSize);
+
+    HRESULT hr = ::StringCbCopyEx(reinterpret_cast<LPWSTR>(pBuffer.get() + pData->uMessageOffset), ucbStringSize, message, NULL, NULL, STRSAFE_IGNORE_NULLS);
+    if (hr != S_OK || FAILED(hr))
+    {
+        OutputDebugStringW(L"CppHttpDiagnosticProviderPoC::SendMessageToWebSocket-> Error copying string. \n");
+        return;
+    }
+
+    ::SendMessage(m_serverHwnd, WM_COPYDATA, reinterpret_cast<WPARAM>(m_serverHwnd), reinterpret_cast<LPARAM>(&copyData));
+}
+
 //
 //  FUNCTION: WndProc(HWND, UINT, WPARAM, LPARAM)
 //
@@ -168,6 +251,7 @@ BOOL InitInstance(HINSTANCE hInstance, int nCmdShow)
 //
 LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 {
+    
     switch (message)
     {
     case WM_COMMAND:
@@ -176,10 +260,8 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
             // Parse the menu selections:
             switch (wmId)
             {
-            case IDM_ABOUT:
-                //DialogBox(hInst, MAKEINTRESOURCE(IDD_ABOUTBOX), hWnd, About);
-				// Windows::System::Launcher::LaunchUriAsync(ref new Windows::Foundation::Uri(L"https://blogs.windows.com/buildingapps//"));
-				StartListeningEdge();
+            case IDM_ABOUT:                
+                SendMessageToWebSocket(L"This is a test");                          
                 break;
             case IDM_EXIT:
                 DestroyWindow(hWnd);
@@ -199,8 +281,13 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
         break;
     case WM_DESTROY:
         PostQuitMessage(0);
+        break;    
+    case WM_COPYDATA:
+        OnMessageFromWebSocket(message, wParam, lParam);       
         break;
+
     default:
+        
         return DefWindowProc(hWnd, message, wParam, lParam);
     }
     return 0;

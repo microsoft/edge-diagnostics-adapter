@@ -14,9 +14,10 @@ namespace NetworkProxyLibrary
         ~NetworkMonitor();
         // temporary methods to start processes not knowing which is the process ID for the edge pages
         int StartListeningAllEdgeProcesses(std::function<void(const wchar_t*)> callback);
+        void StopListeningEdgeProcesses();
 
     private:
-        HttpListener^ httpListeners[10];
+        HttpListener^ _httpListeners[10];
 
     };
 }

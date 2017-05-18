@@ -29,39 +29,44 @@ HttpListener::HttpListener(HttpDiagnosticProvider^ provider, unsigned int proces
     _messageManager->MessageProcessed += ref new NetworkProxyLibrary::MessageProcessedEventHandler(this, &HttpListener::OnMessageProcessed);
 
 
-	TCHAR localPath[MAX_PATH];
-	GetCurrentDirectory(MAX_PATH, localPath);
-	auto logsPath = localPath + std::wstring(L"\\logs");
-	// create file if already exists 
-	CreateDirectory(logsPath.c_str(), nullptr);
+	//TCHAR localPath[MAX_PATH];
+	//GetCurrentDirectory(MAX_PATH, localPath);
+	//auto logsPath = localPath + std::wstring(L"\\logs");
+	//// create file if already exists 
+	//CreateDirectory(logsPath.c_str(), nullptr);
 
-	_requestSentFileName = std::wstring(L"logs\\OnRequestSent_") + std::to_wstring(processId) + std::wstring(L".txt");
-	_responseReceivedFileName = std::wstring(L"logs\\OnResponseReceived_") + std::to_wstring(processId) + std::wstring(L".txt");		
-	
-	CreateLogFile(_requestSentFileName.c_str());
-	CreateLogFile(_responseReceivedFileName.c_str());
+	//_requestSentFileName = std::wstring(L"logs\\OnRequestSent_") + std::to_wstring(processId) + std::wstring(L".txt");
+	//_responseReceivedFileName = std::wstring(L"logs\\OnResponseReceived_") + std::to_wstring(processId) + std::wstring(L".txt");		
+	//
+	//CreateLogFile(_requestSentFileName.c_str());
+	//CreateLogFile(_responseReceivedFileName.c_str());
 }
 
 
 HttpListener::~HttpListener()
 {
-	if (_provider != nullptr)
-	{		
-		// TODO: verify that the unsubscribe works correctly and if so extend to the other events
-		_provider->RequestSent -= _requestSent_token;
-		// _provider->ResponseReceived += ref new TypedEventHandler<HttpDiagnosticProvider ^, HttpDiagnosticProviderResponseReceivedEventArgs ^>(&OnResponseReceived);
-		// _provider->RequestResponseCompleted += ref new TypedEventHandler<HttpDiagnosticProvider ^, HttpDiagnosticProviderRequestResponseCompletedEventArgs ^>(&OnRequestResponseCompleted);	
-		_provider->Stop();
-	}
+    this->StopListening();
 }
 
 void HttpListener::StartListening(std::function<void(const wchar_t*)> callback)
 {
 	_callback = callback;    
 	_provider->Start();
-	EventRegistrationToken _requestSent_token = _provider->RequestSent += ref new TypedEventHandler<HttpDiagnosticProvider^, HttpDiagnosticProviderRequestSentEventArgs^>(this, &HttpListener::OnRequestSent);
-	_provider->ResponseReceived += ref new TypedEventHandler<HttpDiagnosticProvider^, HttpDiagnosticProviderResponseReceivedEventArgs^>(this, &HttpListener::OnResponseReceived);
-	_provider->RequestResponseCompleted += ref new TypedEventHandler<HttpDiagnosticProvider^, HttpDiagnosticProviderRequestResponseCompletedEventArgs^>(this, &HttpListener::OnRequestResponseCompleted);
+	_requestSentToken = _provider->RequestSent += ref new TypedEventHandler<HttpDiagnosticProvider^, HttpDiagnosticProviderRequestSentEventArgs^>(this, &HttpListener::OnRequestSent);
+	_responseReceivedToken = _provider->ResponseReceived += ref new TypedEventHandler<HttpDiagnosticProvider^, HttpDiagnosticProviderResponseReceivedEventArgs^>(this, &HttpListener::OnResponseReceived);
+	_requestResponseCompletedToken = _provider->RequestResponseCompleted += ref new TypedEventHandler<HttpDiagnosticProvider^, HttpDiagnosticProviderRequestResponseCompletedEventArgs^>(this, &HttpListener::OnRequestResponseCompleted);
+}
+
+void NetworkProxyLibrary::HttpListener::StopListening()
+{
+    if (_provider != nullptr)
+    {
+        // TODO: verify that the unsubscribe works correctly and if so extend to the other events
+        _provider->RequestSent -= _requestSentToken;
+        _provider->ResponseReceived -= _responseReceivedToken;
+        _provider->RequestResponseCompleted -= _requestSentToken;
+        _provider->Stop();
+    }
 }
 
 void HttpListener::OnRequestSent(HttpDiagnosticProvider ^sender, HttpDiagnosticProviderRequestSentEventArgs ^args)
@@ -183,14 +188,15 @@ void HttpListener::WriteLogFile(const wchar_t* fileName, unsigned char* message,
 
 void HttpListener::OnMessageProcessed(NetworkProxyLibrary::MessageManager ^sender, Windows::Data::Json::JsonObject ^message)
 {
-    if (message->GetNamedString("method") == "Network.requestWillBeSent")
+    /*if (message->GetNamedString("method") == "Network.requestWillBeSent")
     {
         WriteLogFile(_requestSentFileName.c_str(), message->Stringify()->Data());
     }
     if (message->GetNamedString("method") == "Network.responseReceived")
     {
         WriteLogFile(_responseReceivedFileName.c_str(), message->Stringify()->Data());
-    }
-    auto notification = wstring(L"OnRequestSent::Process Id: ") + to_wstring(_processId) + wstring(L" AbsoluteUri: ") + wstring(message->Stringify()->Data());
-    DoCallback(notification.data());
+    }*/
+    //auto notification = wstring(L"OnRequestSent::Process Id: ") + to_wstring(_processId) + wstring(L" AbsoluteUri: ") + wstring(message->Stringify()->Data());
+    //DoCallback(notification.data());
+    DoCallback(message->Stringify()->Data());
 }
