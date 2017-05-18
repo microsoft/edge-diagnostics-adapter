@@ -2,12 +2,12 @@
 //
 
 #include "stdafx.h"
+#include "Strsafe.h"
 #include "CppHttpDiagnosticProviderPoC.h"
 #include "NetworkMonitor.h";
 #include <functional>
 #include <memory>
-
-#include <functional>
+#include <string>
 
 using namespace std;
 using namespace NetworkProxyLibrary;
@@ -143,6 +143,7 @@ BOOL InitInstance(HINSTANCE hInstance, int nCmdShow)
    return TRUE;
 }
 
+//TODO: remove it because it is duplicated code and include Messages.h to use original copy
 #pragma pack(push, 1)
 struct CopyDataPayload_StringMessage_Data
 {
@@ -150,12 +151,14 @@ struct CopyDataPayload_StringMessage_Data
 };
 #pragma pack(pop)
 
+//TODO: remove it because it is duplicated code and include Messages.h to use original copy
 void FreeCopyDataStructCopy(_In_ PCOPYDATASTRUCT pCopyDataStructCopy)
 {
     delete[](BYTE*) pCopyDataStructCopy->lpData;
     delete pCopyDataStructCopy;
 }
 
+//TODO: remove it because it is duplicated code and include Messages.h to use original copy
 PCOPYDATASTRUCT MakeCopyDataStructCopy(_In_ const PCOPYDATASTRUCT pCopyDataStruct)
 {
     PCOPYDATASTRUCT const pCopyDataStructCopy = new COPYDATASTRUCT;
@@ -168,18 +171,22 @@ PCOPYDATASTRUCT MakeCopyDataStructCopy(_In_ const PCOPYDATASTRUCT pCopyDataStruc
     return pCopyDataStructCopy;
 }
 
+//TODO: remove it because it is duplicated code and include Messages.h to use original copy
+enum CopyDataPayload_ProcSignature : ULONG_PTR
+{
+    StringMessage_Signature
+};
+
 void OnMessageFromWebSocket(UINT nMsg, WPARAM wParam, LPARAM lParam)
 {       
     // CString message;
     m_serverHwnd = reinterpret_cast<HWND>(wParam);
     // Scope for the copied data
     {
-        // Take ownership of the copydata struct memory
-        //unique_ptr<COPYDATASTRUCT, void(*)(COPYDATASTRUCT*)> spParams(reinterpret_cast<PCOPYDATASTRUCT>(lParam), ::FreeCopyDataStructCopy);
 
         PCOPYDATASTRUCT pCopyDataStruct = reinterpret_cast<PCOPYDATASTRUCT>(lParam);
         
-        // Copy the data so that we can post message to ourselves and unblock the SendMessage caller
+        // Copy the data so that we can handle the message and unblock the SendMessage caller
         unique_ptr<COPYDATASTRUCT, void(*)(COPYDATASTRUCT*)> spParams(::MakeCopyDataStructCopy(pCopyDataStruct), ::FreeCopyDataStructCopy);
         
         PCOPYDATASTRUCT pParams = spParams.release();
@@ -189,6 +196,45 @@ void OnMessageFromWebSocket(UINT nMsg, WPARAM wParam, LPARAM lParam)
         LPCWSTR lpString = reinterpret_cast<LPCWSTR>(reinterpret_cast<BYTE*>(pMessage) + pMessage->uMessageOffset);
         // message = lpString;
     }
+}
+
+void SendMessageToWebSocket(_In_ const wchar_t* message)
+{
+    if (m_serverHwnd == nullptr)
+    {
+        OutputDebugStringW(L"CppHttpDiagnosticProviderPoC::SendMessageToWebSocket-> Pointer to the wecksocket window is null. \n");
+        return;
+    }
+    const size_t ucbParamsSize = sizeof(CopyDataPayload_StringMessage_Data);
+    const size_t ucbStringSize = sizeof(WCHAR) * (::wcslen(message) + 1);
+    const size_t ucbBufferSize = ucbParamsSize + ucbStringSize;
+    std::unique_ptr<BYTE> pBuffer;
+    try
+    {
+        pBuffer.reset(new BYTE[ucbBufferSize]);
+    }
+    catch (std::bad_alloc&)
+    {
+        OutputDebugStringW(L"CppHttpDiagnosticProviderPoC::SendMessageToWebSocket-> Out of memory exception. \n");
+        return;
+    }
+
+    COPYDATASTRUCT copyData;
+    copyData.dwData = CopyDataPayload_ProcSignature::StringMessage_Signature;
+    copyData.cbData = static_cast<DWORD>(ucbBufferSize);
+    copyData.lpData = pBuffer.get();
+
+    CopyDataPayload_StringMessage_Data* pData = reinterpret_cast<CopyDataPayload_StringMessage_Data*>(pBuffer.get());
+    pData->uMessageOffset = static_cast<UINT>(ucbParamsSize);
+
+    HRESULT hr = ::StringCbCopyEx(reinterpret_cast<LPWSTR>(pBuffer.get() + pData->uMessageOffset), ucbStringSize, message, NULL, NULL, STRSAFE_IGNORE_NULLS);
+    if (hr != S_OK || FAILED(hr))
+    {
+        OutputDebugStringW(L"CppHttpDiagnosticProviderPoC::SendMessageToWebSocket-> Error copying string. \n");
+        return;
+    }
+
+    ::SendMessage(m_serverHwnd, WM_COPYDATA, reinterpret_cast<WPARAM>(m_serverHwnd), reinterpret_cast<LPARAM>(&copyData));
 }
 
 //
@@ -212,14 +258,8 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
             // Parse the menu selections:
             switch (wmId)
             {
-            case IDM_ABOUT:
-                //DialogBox(hInst, MAKEINTRESOURCE(IDD_ABOUTBOX), hWnd, About);
-				// Windows::System::Launcher::LaunchUriAsync(ref new Windows::Foundation::Uri(L"https://blogs.windows.com/buildingapps//"));
-                //::MessageBox(nullptr, L"IDM_ABOUT", L"Message", 0);
-				//StartListeningEdge();
-                ::SendMessage(m_serverHwnd, WM_COPYDATA, reinterpret_cast<WPARAM>(m_serverHwnd), NULL);
-                //::SendMessage(m_serverHwnd, WM_PROCESSCOPYDATA, reinterpret_cast<WPARAM>(m_serverHwnd), NULL);
-                
+            case IDM_ABOUT:                
+                SendMessageToWebSocket(L"This is a test");                          
                 break;
             case IDM_EXIT:
                 DestroyWindow(hWnd);
@@ -239,14 +279,9 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
         break;
     case WM_DESTROY:
         PostQuitMessage(0);
-        break;
-    case WM_PROCESSCOPYDATA:
-        ::MessageBox(nullptr, L"WM_NETWORKPROXY", L"Message", 0);
-        break;
+        break;    
     case WM_COPYDATA:
-        OnMessageFromWebSocket(message, wParam, lParam);
-        //::MessageBox(nullptr, L"WM_COPYDATA", L"Message", 0);
-
+        OnMessageFromWebSocket(message, wParam, lParam);       
         break;
 
     default:
