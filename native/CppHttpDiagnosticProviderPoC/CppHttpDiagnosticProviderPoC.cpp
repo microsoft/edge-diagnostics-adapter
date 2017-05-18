@@ -34,6 +34,7 @@ BOOL                InitInstance(HINSTANCE, int);
 LRESULT CALLBACK    WndProc(HWND, UINT, WPARAM, LPARAM);
 INT_PTR CALLBACK    About(HWND, UINT, WPARAM, LPARAM);
 void OnMessageReceived(const wchar_t* message);
+void SendMessageToWebSocket(_In_ const wchar_t* message);
 
 int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
                      _In_opt_ HINSTANCE hPrevInstance,
@@ -73,18 +74,10 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
     return (int) msg.wParam;
 }
 
-
-void StartListeningEdge()
-{
-    m_networkMonitor = new NetworkMonitor();
-    m_networkMonitor->StartListeningAllEdgeProcesses(&OnMessageReceived);	
-}
-
 void OnMessageReceived(const wchar_t* message)
 {
-	auto msg = message;
+    SendMessageToWebSocket(message);
 }
-
 
 //
 //  FUNCTION: MyRegisterClass()
@@ -175,8 +168,7 @@ enum CopyDataPayload_ProcSignature : ULONG_PTR
 };
 
 void OnMessageFromWebSocket(UINT nMsg, WPARAM wParam, LPARAM lParam)
-{       
-    // CString message;
+{           
     m_serverHwnd = reinterpret_cast<HWND>(wParam);
     // Scope for the copied data
     {
@@ -191,7 +183,20 @@ void OnMessageFromWebSocket(UINT nMsg, WPARAM wParam, LPARAM lParam)
         // Get the string message from the structure
         CopyDataPayload_StringMessage_Data* pMessage = reinterpret_cast<CopyDataPayload_StringMessage_Data*>(pParams->lpData);
         LPCWSTR lpString = reinterpret_cast<LPCWSTR>(reinterpret_cast<BYTE*>(pMessage) + pMessage->uMessageOffset);
-        // message = lpString;
+
+        wstring test = wstring(lpString);
+        if (test.find(L"\"method\":\"Network.enable\"") != string::npos) 
+        {
+            if (m_networkMonitor == nullptr)
+            {
+                m_networkMonitor = new NetworkMonitor();
+            }
+            m_networkMonitor->StartListeningAllEdgeProcesses(&OnMessageReceived);
+        }
+        else if (test.find(L"\"method\":\"Network.disable\"") != string::npos)
+        {
+            m_networkMonitor->StopListeningEdgeProcesses();
+        }      
     }
 }
 

@@ -46,6 +46,7 @@ export module EdgeAdapter {
         private _idToNetWorkProxyMap: Map<string, edgeAdapter.NetworkProxyInstanceId> = new Map<string,edgeAdapter.NetworkProxyInstanceId>();
         private _edgeToWSMap: Map<edgeAdapter.EdgeInstanceId, ws[]> = new Map<edgeAdapter.EdgeInstanceId, ws[]>();
         private _diagLogging: boolean = false;
+        private _networkProxyMessage: Array<string> = new Array<string> ('Network.enable', 'Network.disable');
 
         constructor (diagLogging: boolean) {
             this._diagLogging = diagLogging;
@@ -138,7 +139,7 @@ export module EdgeAdapter {
                     response.end();
                     break;
             }
-        }
+        }        
 
         private onWSSConnection(ws: ws): void {
             // Normalize request url
@@ -190,10 +191,10 @@ export module EdgeAdapter {
                 ws.on('message', (msg) => {
                     if (this._diagLogging) {
                         console.log("Client:", instanceId, msg);
-                    }                    
-                    //TODO: decide if the message will be for edge or for the network proxy and send it to the proper id
-                    edgeAdapter.forwardTo(networkInstanceId, msg);
-                    // Look message type and use forwardTo to instanceId or instanceNetworkId
+                    }   
+                    if(this.isMessageForNetworkProxy(msg)){        
+                        edgeAdapter.forwardTo(networkInstanceId, msg);
+                    }                                     
                     edgeAdapter.forwardTo(instanceId, msg);                    
                 });
 
@@ -217,10 +218,23 @@ export module EdgeAdapter {
                 // No matching Edge instance
                 ws.close();
             }
-        }
+        }        
 
         private log(message: string): void {
             this.onLogMessage(message);
+        }
+
+        private isMessageForNetworkProxy(message: any): boolean{
+            var jsonObject:any;
+            try {
+                 jsonObject = JSON.parse(message);                
+            } catch (SyntaxError) {
+                console.log("Error parsing message: ", message);
+                return false;
+            }
+            let method = jsonObject['method'] as string;
+            
+            return this._networkProxyMessage.indexOf(method) != -1;
         }
 
         private onEdgeMessage(instanceId: edgeAdapter.EdgeInstanceId, msg: string): void {

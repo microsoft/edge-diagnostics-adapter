@@ -23,13 +23,16 @@ namespace NetworkProxyLibrary
         // internal because Non-RT types are not allowed in public signature https://voidnish.wordpress.com/2012/04/11/visual-c-winrt-faq-non-rt-types-in-public-signature/  
     internal:
         void StartListening(function<void(const wchar_t*)> callback);
+        void StopListening();
 
     private:
         ~HttpListener();
         HttpDiagnosticProvider^ _provider;
         std::wstring _requestSentFileName;
         std::wstring _responseReceivedFileName;
-        EventRegistrationToken _requestSent_token;
+        EventRegistrationToken _requestSentToken;
+        EventRegistrationToken _responseReceivedToken;
+        EventRegistrationToken _requestResponseCompletedToken;
         std::function<void(const wchar_t*)> _callback;
         unsigned int _processId;
         MessageManager^ _messageManager;

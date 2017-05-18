@@ -65,3 +65,11 @@ int NetworkMonitor::StartListeningAllEdgeProcesses(std::function<void(const wcha
 
 	return processCounter;
 }
+
+void NetworkMonitor::StopListeningEdgeProcesses() 
+{
+    for each (HttpListener^ listener in _httpListeners)
+    {
+        listener->StopListening();
+    }
+}
