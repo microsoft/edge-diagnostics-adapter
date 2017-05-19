@@ -202,9 +202,9 @@ void OnMessageFromWebSocket(UINT nMsg, WPARAM wParam, LPARAM lParam)
         {
             if (m_networkMonitor == nullptr)
             {
-                m_networkMonitor = new NetworkMonitor();
+                m_networkMonitor = new NetworkMonitor(m_edgeProcessId);
             }
-            m_networkMonitor->StartListeningEdgeProcess(m_edgeProcessId, &OnMessageReceived);
+            m_networkMonitor->StartListeningEdgeProcess(&OnMessageReceived);
         }
         else if (message.find(L"\"method\":\"Network.disable\"") != string::npos)
         {
@@ -275,9 +275,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
             switch (wmId)
             {
             case IDM_ABOUT:                
-                //SendMessageToWebSocket(L"This is a test"); 
-                m_networkMonitor = new NetworkMonitor();
-                m_networkMonitor->StartListeningEdgeProcess(m_edgeProcessId, &OnMessageReceived);
+                //SendMessageToWebSocket(L"This is a test");                 
                 break;
             case IDM_EXIT:
                 DestroyWindow(hWnd);

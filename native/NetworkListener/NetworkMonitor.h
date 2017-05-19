@@ -10,12 +10,13 @@ namespace NetworkProxyLibrary
     class NetworkMonitor
     {
     public:
-        NetworkMonitor();
+        NetworkMonitor(DWORD processId);
         ~NetworkMonitor();
-        int StartListeningEdgeProcess(DWORD processId , std::function<void(const wchar_t*)> callback);
+        int StartListeningEdgeProcess(std::function<void(const wchar_t*)> callback);
         void StopListeningEdgeProcess();
 
     private:
         HttpListener^ _httpListener;
+        DWORD _processId;
     };
 }

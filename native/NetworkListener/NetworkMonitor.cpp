@@ -12,16 +12,27 @@ using namespace Windows::Foundation::Collections;
 
 using namespace NetworkProxyLibrary;
 
-NetworkMonitor::NetworkMonitor()
+NetworkMonitor::NetworkMonitor(DWORD processId)
 {
+    _processId = processId;
 }
 
 NetworkMonitor::~NetworkMonitor()
 {
+    if (_httpListener != nullptr)
+    {
+        _httpListener->StopListening();
+    }
 }
 
-int NetworkProxyLibrary::NetworkMonitor::StartListeningEdgeProcess(DWORD processId, std::function<void(const wchar_t*)> callback)
+int NetworkProxyLibrary::NetworkMonitor::StartListeningEdgeProcess(std::function<void(const wchar_t*)> callback)
 {
+    if (_httpListener != nullptr) 
+    {
+        _httpListener->StartListening(callback);
+        return 1;
+    }
+
     const wchar_t* edgeName = L"EdgeCP";
     ProcessDiagnosticInfo^ edgeProcessInfo = nullptr;
     IVectorView<ProcessDiagnosticInfo^>^ processes = ProcessDiagnosticInfo::GetForProcesses();
@@ -30,7 +41,7 @@ int NetworkProxyLibrary::NetworkMonitor::StartListeningEdgeProcess(DWORD process
     {
         const wchar_t* name = info->ExecutableFileName->Data();
 
-        if (info->ProcessId == processId && std::wcsstr(name, edgeName) != nullptr)
+        if (info->ProcessId == _processId && std::wcsstr(name, edgeName) != nullptr)
         {
             edgeProcessInfo = info;
             break;
@@ -39,7 +50,7 @@ int NetworkProxyLibrary::NetworkMonitor::StartListeningEdgeProcess(DWORD process
 
     if (edgeProcessInfo == nullptr)
     {
-        String^ exceptionMessage = "Not found Edge process with id: " + processId.ToString();
+        String^ exceptionMessage = "Not found Edge process with id: " + _processId.ToString();
         throw ref new Exception(-1, exceptionMessage);
     }
 
