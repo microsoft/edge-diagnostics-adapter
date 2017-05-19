@@ -26,6 +26,7 @@ WCHAR szWindowClass[MAX_LOADSTRING];            // the main window class name
 
 NetworkMonitor* m_networkMonitor;
 HWND m_serverHwnd;
+DWORD m_edgeProcessId;
 
 
 // Forward declarations of functions included in this code module:
@@ -45,6 +46,19 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
     UNREFERENCED_PARAMETER(lpCmdLine);
 
     // TODO: Place code here.
+    //Sleep(15000);
+    const wstring parameter = L"--process-id=";
+    wstring commandLine = GetCommandLine();
+    auto valuePosition = commandLine.find(parameter.c_str());
+
+    if (valuePosition == string::npos)
+    {
+        MessageBox(NULL, L"string::npos", L"info", NULL);
+        throw ref new InvalidArgumentException(L"Required argument to start the application: --process-id=%processId%");
+    }
+        
+    wstring paramValue = commandLine.substr(valuePosition + parameter.length());
+    m_edgeProcessId = _wtol(paramValue.c_str()); 
 
     // Initialize global strings
     LoadStringW(hInstance, IDS_APP_TITLE, szTitle, MAX_LOADSTRING);
@@ -172,7 +186,6 @@ void OnMessageFromWebSocket(UINT nMsg, WPARAM wParam, LPARAM lParam)
     m_serverHwnd = reinterpret_cast<HWND>(wParam);
     // Scope for the copied data
     {
-
         PCOPYDATASTRUCT pCopyDataStruct = reinterpret_cast<PCOPYDATASTRUCT>(lParam);
         
         // Copy the data so that we can handle the message and unblock the SendMessage caller
@@ -183,19 +196,19 @@ void OnMessageFromWebSocket(UINT nMsg, WPARAM wParam, LPARAM lParam)
         // Get the string message from the structure
         CopyDataPayload_StringMessage_Data* pMessage = reinterpret_cast<CopyDataPayload_StringMessage_Data*>(pParams->lpData);
         LPCWSTR lpString = reinterpret_cast<LPCWSTR>(reinterpret_cast<BYTE*>(pMessage) + pMessage->uMessageOffset);
+        wstring message = wstring(lpString);
 
-        wstring test = wstring(lpString);
-        if (test.find(L"\"method\":\"Network.enable\"") != string::npos) 
+        if (message.find(L"\"method\":\"Network.enable\"") != string::npos) 
         {
             if (m_networkMonitor == nullptr)
             {
                 m_networkMonitor = new NetworkMonitor();
             }
-            m_networkMonitor->StartListeningAllEdgeProcesses(&OnMessageReceived);
+            m_networkMonitor->StartListeningEdgeProcess(m_edgeProcessId, &OnMessageReceived);
         }
-        else if (test.find(L"\"method\":\"Network.disable\"") != string::npos)
+        else if (message.find(L"\"method\":\"Network.disable\"") != string::npos)
         {
-            m_networkMonitor->StopListeningEdgeProcesses();
+            m_networkMonitor->StopListeningEdgeProcess();
         }      
     }
 }
@@ -207,6 +220,7 @@ void SendMessageToWebSocket(_In_ const wchar_t* message)
         OutputDebugStringW(L"CppHttpDiagnosticProviderPoC::SendMessageToWebSocket-> Pointer to the wecksocket window is null. \n");
         return;
     }
+
     const size_t ucbParamsSize = sizeof(CopyDataPayload_StringMessage_Data);
     const size_t ucbStringSize = sizeof(WCHAR) * (::wcslen(message) + 1);
     const size_t ucbBufferSize = ucbParamsSize + ucbStringSize;
@@ -261,7 +275,9 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
             switch (wmId)
             {
             case IDM_ABOUT:                
-                SendMessageToWebSocket(L"This is a test");                          
+                //SendMessageToWebSocket(L"This is a test"); 
+                m_networkMonitor = new NetworkMonitor();
+                m_networkMonitor->StartListeningEdgeProcess(m_edgeProcessId, &OnMessageReceived);
                 break;
             case IDM_EXIT:
                 DestroyWindow(hWnd);

@@ -1,6 +1,5 @@
 ﻿#include "stdafx.h"
 #include "NetworkMonitor.h"
-
 #include "HttpListener.h"
 #include <string>
 #include <functional>
@@ -21,55 +20,40 @@ NetworkMonitor::~NetworkMonitor()
 {
 }
 
-int NetworkMonitor::StartListeningAllEdgeProcesses(std::function<void(const wchar_t*)> callback)
+int NetworkProxyLibrary::NetworkMonitor::StartListeningEdgeProcess(DWORD processId, std::function<void(const wchar_t*)> callback)
 {
-	ProcessDiagnosticInfo^ edgeProcesses[10];
-	IVectorView<ProcessDiagnosticInfo^>^ processes = ProcessDiagnosticInfo::GetForProcesses();
-	auto nProcesses = processes->Size;
-	auto count = 0;
-	for (size_t i = 0; i < nProcesses; i++)
-	{
-		ProcessDiagnosticInfo^ info = processes->GetAt(i);
-		const wchar_t* name = info->ExecutableFileName->Data();
-		const wchar_t* edgeName = L"EdgeCP";
-		if (std::wcsstr(name, edgeName) != nullptr)
-		{
-			edgeProcesses[count] = info;
-			count++;
-		}
-	}
+    const wchar_t* edgeName = L"EdgeCP";
+    ProcessDiagnosticInfo^ edgeProcessInfo = nullptr;
+    IVectorView<ProcessDiagnosticInfo^>^ processes = ProcessDiagnosticInfo::GetForProcesses();
 
-	auto processCounter = 0;
+    for (ProcessDiagnosticInfo^ info : processes)
+    {
+        const wchar_t* name = info->ExecutableFileName->Data();
 
-	while (edgeProcesses[processCounter] != nullptr)
-	{
-		try
-		{
-			auto processInfo = edgeProcesses[processCounter];
-			HttpDiagnosticProvider^ diagnosticProvider = HttpDiagnosticProvider::CreateFromProcessDiagnosticInfo(processInfo);
-			_httpListeners[processCounter] = ref new HttpListener(diagnosticProvider, processInfo->ProcessId);
-			processCounter++;
-		}
-		catch (const std::exception& ex)
-		{
-			auto t = ex;
-		}
-	}
+        if (info->ProcessId == processId && std::wcsstr(name, edgeName) != nullptr)
+        {
+            edgeProcessInfo = info;
+            break;
+        }
+    }
 
-	processCounter = 0;
-	while (edgeProcesses[processCounter] != nullptr)
-	{
-		_httpListeners[processCounter]->StartListening(callback);
-		processCounter++;
-	}
+    if (edgeProcessInfo == nullptr)
+    {
+        String^ exceptionMessage = "Not found Edge process with id: " + processId.ToString();
+        throw ref new Exception(-1, exceptionMessage);
+    }
 
-	return processCounter;
+    HttpDiagnosticProvider^ diagnosticProvider = HttpDiagnosticProvider::CreateFromProcessDiagnosticInfo(edgeProcessInfo);
+    _httpListener = ref new HttpListener(diagnosticProvider, edgeProcessInfo->ProcessId);
+    _httpListener->StartListening(callback);
+
+    return 1;
 }
 
-void NetworkMonitor::StopListeningEdgeProcesses() 
+void NetworkMonitor::StopListeningEdgeProcess() 
 {
-    for each (HttpListener^ listener in _httpListeners)
+    if (_httpListener != nullptr)
     {
-        listener->StopListening();
+        _httpListener->StopListening();
     }
 }

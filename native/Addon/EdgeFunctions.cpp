@@ -1,4 +1,4 @@
-//
+﻿//
 // Copyright (C) Microsoft. All rights reserved.
 //
 
@@ -616,6 +616,12 @@ NAN_METHOD(createNetworkProxyFor)
     //TODO: put final relative path
     networkProxyPath.Format(L"%s\\out\\lib\\CppHttpDiagnosticProviderPoC.exe", localPath);
 
+    LPDWORD processId;
+    GetWindowThreadProcessId(hwnd, processId);    
+
+    CString arguments;    
+    arguments.Format(L"--process-id=%d", *processId);
+
     // Launch the process
     STARTUPINFO si = { 0 };
     PROCESS_INFORMATION pi = { 0 };
@@ -624,7 +630,7 @@ NAN_METHOD(createNetworkProxyFor)
 
     BOOL result = ::CreateProcess(
         networkProxyPath,
-        nullptr,
+        arguments.GetBuffer(),
         nullptr,
         nullptr,
         FALSE,
@@ -633,6 +639,7 @@ NAN_METHOD(createNetworkProxyFor)
         nullptr,
         &si,
         &pi);
+    arguments.ReleaseBuffer();
 
     // give time to the process to start the windows
     Sleep(1000);
