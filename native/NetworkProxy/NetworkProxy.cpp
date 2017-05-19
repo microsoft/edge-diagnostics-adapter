@@ -1,9 +1,9 @@
-﻿// CppHttpDiagnosticProviderPoC.cpp : Defines the entry point for the application.
+﻿// NetworkProxy.cpp : Defines the entry point for the application.
 //
 
 #include "stdafx.h"
 #include "Strsafe.h"
-#include "CppHttpDiagnosticProviderPoC.h"
+#include "NetworkProxy.h"
 #include "NetworkMonitor.h";
 #include <functional>
 #include <memory>
@@ -62,7 +62,7 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 
     // Initialize global strings
     LoadStringW(hInstance, IDS_APP_TITLE, szTitle, MAX_LOADSTRING);
-    LoadStringW(hInstance, IDC_CPPHTTPDIAGNOSTICPROVIDERPOC, szWindowClass, MAX_LOADSTRING);
+    LoadStringW(hInstance, IDC_NetworkProxy, szWindowClass, MAX_LOADSTRING);
     MyRegisterClass(hInstance);
 
     // Perform application initialization:
@@ -71,7 +71,7 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
         return FALSE;
     }
 
-    HACCEL hAccelTable = LoadAccelerators(hInstance, MAKEINTRESOURCE(IDC_CPPHTTPDIAGNOSTICPROVIDERPOC));
+    HACCEL hAccelTable = LoadAccelerators(hInstance, MAKEINTRESOURCE(IDC_NetworkProxy));
 
     MSG msg;
 
@@ -109,10 +109,10 @@ ATOM MyRegisterClass(HINSTANCE hInstance)
     wcex.cbClsExtra     = 0;
     wcex.cbWndExtra     = 0;
     wcex.hInstance      = hInstance;
-    wcex.hIcon          = LoadIcon(hInstance, MAKEINTRESOURCE(IDI_CPPHTTPDIAGNOSTICPROVIDERPOC));
+    wcex.hIcon          = LoadIcon(hInstance, MAKEINTRESOURCE(IDI_NetworkProxy));
     wcex.hCursor        = LoadCursor(nullptr, IDC_ARROW);
     wcex.hbrBackground  = (HBRUSH)(COLOR_WINDOW+1);
-    wcex.lpszMenuName   = MAKEINTRESOURCEW(IDC_CPPHTTPDIAGNOSTICPROVIDERPOC);
+    wcex.lpszMenuName   = MAKEINTRESOURCEW(IDC_NetworkProxy);
     wcex.lpszClassName  = szWindowClass;
     wcex.hIconSm        = LoadIcon(wcex.hInstance, MAKEINTRESOURCE(IDI_SMALL));
 
@@ -217,7 +217,7 @@ void SendMessageToWebSocket(_In_ const wchar_t* message)
 {
     if (m_serverHwnd == nullptr)
     {
-        OutputDebugStringW(L"CppHttpDiagnosticProviderPoC::SendMessageToWebSocket-> Pointer to the wecksocket window is null. \n");
+        OutputDebugStringW(L"NetworkProxy::SendMessageToWebSocket-> Pointer to the wecksocket window is null. \n");
         return;
     }
 
@@ -231,7 +231,7 @@ void SendMessageToWebSocket(_In_ const wchar_t* message)
     }
     catch (std::bad_alloc&)
     {
-        OutputDebugStringW(L"CppHttpDiagnosticProviderPoC::SendMessageToWebSocket-> Out of memory exception. \n");
+        OutputDebugStringW(L"NetworkProxy::SendMessageToWebSocket-> Out of memory exception. \n");
         return;
     }
 
@@ -246,7 +246,7 @@ void SendMessageToWebSocket(_In_ const wchar_t* message)
     HRESULT hr = ::StringCbCopyEx(reinterpret_cast<LPWSTR>(pBuffer.get() + pData->uMessageOffset), ucbStringSize, message, NULL, NULL, STRSAFE_IGNORE_NULLS);
     if (hr != S_OK || FAILED(hr))
     {
-        OutputDebugStringW(L"CppHttpDiagnosticProviderPoC::SendMessageToWebSocket-> Error copying string. \n");
+        OutputDebugStringW(L"NetworkProxy::SendMessageToWebSocket-> Error copying string. \n");
         return;
     }
 
@@ -275,7 +275,9 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
             switch (wmId)
             {
             case IDM_ABOUT:                
-                //SendMessageToWebSocket(L"This is a test");                 
+                SendMessageToWebSocket(L"This is a conectivity test");                  
+                /*m_networkMonitor = new NetworkMonitor(m_edgeProcessId);                
+                m_networkMonitor->StartListeningEdgeProcess(&OnMessageReceived);*/
                 break;
             case IDM_EXIT:
                 DestroyWindow(hWnd);

@@ -22,8 +22,9 @@
     <VCProjectVersion>15.0</VCProjectVersion>
     <ProjectGuid>{8BD0AEFA-0909-4571-9BAF-C464E673BFF5}</ProjectGuid>
     <Keyword>Win32Proj</Keyword>
-    <RootNamespace>CppHttpDiagnosticProviderPoC</RootNamespace>
+    <RootNamespace>NetworkProxy</RootNamespace>
     <WindowsTargetPlatformVersion>10.0.14393.0</WindowsTargetPlatformVersion>
+    <ProjectName>NetworkProxy</ProjectName>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
@@ -156,13 +157,13 @@ copy /Y "$(OutDir)$(ProjectName).pdb" "$(SolutionDir)..\out\lib\$(ProjectName).p
     <Text Include="ReadMe.txt" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="CppHttpDiagnosticProviderPoC.h" />
+    <ClInclude Include="NetworkProxy.h" />
     <ClInclude Include="Resource.h" />
     <ClInclude Include="stdafx.h" />
     <ClInclude Include="targetver.h" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="CppHttpDiagnosticProviderPoC.cpp" />
+    <ClCompile Include="NetworkProxy.cpp" />
     <ClCompile Include="stdafx.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Create</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Create</PrecompiledHeader>
@@ -171,10 +172,10 @@ copy /Y "$(OutDir)$(ProjectName).pdb" "$(SolutionDir)..\out\lib\$(ProjectName).p
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ResourceCompile Include="CppHttpDiagnosticProviderPoC.rc" />
+    <ResourceCompile Include="NetworkProxy.rc" />
   </ItemGroup>
   <ItemGroup>
-    <Image Include="CppHttpDiagnosticProviderPoC.ico" />
+    <Image Include="NetworkProxy.ico" />
     <Image Include="small.ico" />
   </ItemGroup>
   <ItemGroup>

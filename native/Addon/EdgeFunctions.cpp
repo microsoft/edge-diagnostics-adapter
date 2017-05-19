@@ -614,7 +614,7 @@ NAN_METHOD(createNetworkProxyFor)
     GetCurrentDirectory(MAX_PATH, localPath);
     CString networkProxyPath;
     //TODO: put final relative path
-    networkProxyPath.Format(L"%s\\out\\lib\\CppHttpDiagnosticProviderPoC.exe", localPath);
+    networkProxyPath.Format(L"%s\\out\\lib\\NetworkProxy.exe", localPath);
 
     LPDWORD processId;
     GetWindowThreadProcessId(hwnd, processId);    
