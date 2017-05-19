@@ -207,10 +207,10 @@ void MessageManager::ProcessResponseReceivedMessage(Message^ message)
        
 }
 
-JsonObject^ SerializeHeaders(HttpRequestMessage^ message)
+JsonObject^ SerializeHeaders(IIterator<IKeyValuePair<String^, String^>^>^ iterator)
 {
     JsonObject^ result = ref new JsonObject();
-    auto iterator = message->Headers->First();
+    //auto iterator = message->Headers->First();
 
     while (iterator->HasCurrent)
     {
@@ -238,7 +238,7 @@ JsonObject ^ MessageManager::GenerateRequestWilBeSentMessage(HttpDiagnosticProvi
     InsertString(request, "url", message->RequestUri->AbsoluteUri);
 
     InsertString(request, "method", message->Method->Method);    
-    request->Insert("headers", SerializeHeaders(message));
+    request->Insert("headers", SerializeHeaders(message->Headers->First()));
     if (postPayload != nullptr && message->Method->Method == "POST")
     {
         InsertString(request, "postData", postPayload);
@@ -257,7 +257,9 @@ JsonObject ^ MessageManager::GenerateRequestWilBeSentMessage(HttpDiagnosticProvi
     String^ initiator = "{\"type\": \"" + data->Initiator.ToString() + "\"}";
     JsonValue^ initiatorValue = JsonValue::Parse(initiator);
     params->Insert("initiator", initiatorValue);
-    InsertString(params, "type", "Document"); // TODO: compose the type, remove hardcoded value
+    // TODO: compose the type, remove hardcoded value
+    // allowed values: Document, Stylesheet, Image, Media, Font, Script, TextTrack, XHR, Fetch, EventSource, WebSocket, Manifest, Other
+    InsertString(params, "type", "Document");
 
     result->Insert("params", params);    
     _dictionaryMutex.lock();
@@ -294,7 +296,23 @@ JsonObject^ MessageManager::GenerateResponseReceivedMessage(HttpDiagnosticProvid
     InsertString(params, "requestId", sentParams->GetNamedString("requestId"));
     InsertString(params, "frameId", sentParams->GetNamedString("frameId"));
     InsertString(params, "loaderId", sentParams->GetNamedString("loaderId"));
+    auto timeInSecs = data->Timestamp.UniversalTime / (10000000);
+    InsertNumber(params, "timestamp", timeInSecs);
+    // TODO: compose the type, remove hardcoded value
+    // allowed values: Document, Stylesheet, Image, Media, Font, Script, TextTrack, XHR, Fetch, EventSource, WebSocket, Manifest, Other
+    InsertString(params, "type", "Document");
 
+    JsonObject^ response = ref new JsonObject();
+    InsertString(response, "url", sentParams->GetNamedString("documentURL"));
+    InsertNumber(response, "status", static_cast<int>(message->StatusCode));    
+    InsertString(response, "statusText", message->ReasonPhrase);
+    response->Insert("headers", SerializeHeaders(message->Headers->First()));
+    String^ mimeType = message->Content->Headers->HasKey("Content-Type") ? message->Content->Headers->Lookup("Content-Type") : "";
+    InsertString(response, "mimeType", mimeType);      
+    response->Insert("requestHeaders", sentParams->GetNamedObject("request")->GetNamedObject("headers"));
+
+
+    params->Insert("response", response);
     result->Insert("params", params);
     
     return result;
