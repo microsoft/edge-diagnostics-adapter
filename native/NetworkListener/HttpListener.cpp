@@ -29,17 +29,17 @@ HttpListener::HttpListener(HttpDiagnosticProvider^ provider, unsigned int proces
     _messageManager->MessageProcessed += ref new NetworkProxyLibrary::MessageProcessedEventHandler(this, &HttpListener::OnMessageProcessed);
 
     // commented code for printing in files the messages, as helper for development of the library
-	//TCHAR localPath[MAX_PATH];
-	//GetCurrentDirectory(MAX_PATH, localPath);
-	//auto logsPath = localPath + std::wstring(L"\\logs");
-	//// create file if already exists 
-	//CreateDirectory(logsPath.c_str(), nullptr);
+	TCHAR localPath[MAX_PATH];
+	GetCurrentDirectory(MAX_PATH, localPath);
+	auto logsPath = localPath + std::wstring(L"\\logs");
+	// create file if already exists 
+	CreateDirectory(logsPath.c_str(), nullptr);
 
-	//_requestSentFileName = std::wstring(L"logs\\OnRequestSent_") + std::to_wstring(processId) + std::wstring(L".txt");
-	//_responseReceivedFileName = std::wstring(L"logs\\OnResponseReceived_") + std::to_wstring(processId) + std::wstring(L".txt");		
-	//
-	//CreateLogFile(_requestSentFileName.c_str());
-	//CreateLogFile(_responseReceivedFileName.c_str());
+	_requestSentFileName = std::wstring(L"logs\\OnRequestSent_") + std::to_wstring(processId) + std::wstring(L".txt");
+	_responseReceivedFileName = std::wstring(L"logs\\OnResponseReceived_") + std::to_wstring(processId) + std::wstring(L".txt");		
+	
+	CreateLogFile(_requestSentFileName.c_str());
+	CreateLogFile(_responseReceivedFileName.c_str());
 }
 
 
@@ -94,14 +94,15 @@ void HttpListener::DoCallback(const wchar_t* notification)
 
 void HttpListener::OnMessageProcessed(NetworkProxyLibrary::MessageManager ^sender, Windows::Data::Json::JsonObject ^message)
 {
-    /*if (message->GetNamedString("method") == "Network.requestWillBeSent")
+    if (message->GetNamedString("method") == "Network.requestWillBeSent")
     {
     WriteLogFile(_requestSentFileName.c_str(), message->Stringify()->Data());
     }
-    if (message->GetNamedString("method") == "Network.responseReceived")
+    //if (message->GetNamedString("method") == "Network.responseReceived")
+    else
     {
     WriteLogFile(_responseReceivedFileName.c_str(), message->Stringify()->Data());
-    }*/
+    }
     //auto notification = wstring(L"OnRequestSent::Process Id: ") + to_wstring(_processId) + wstring(L" AbsoluteUri: ") + wstring(message->Stringify()->Data());
     //DoCallback(notification.data());
     DoCallback(message->Stringify()->Data());

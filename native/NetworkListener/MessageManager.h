@@ -81,7 +81,9 @@ namespace NetworkProxyLibrary
         void SendToProcess(Message^ message);
         
         JsonObject^ GenerateRequestWilBeSentMessage(HttpDiagnosticProviderRequestSentEventArgs ^data, String^ postPayload = nullptr);
-        JsonObject^ GenerateResponseReceivedMessage(HttpDiagnosticProviderResponseReceivedEventArgs^ data);            
+        JsonObject^ GenerateResponseReceivedMessage(HttpDiagnosticProviderResponseReceivedEventArgs^ data);
+        JsonObject^ GenerateDataReceivedMessage(JsonObject^ responseReceivedMessage, double contentLenght);
+        
         void PostProcessMessage(JsonObject^ jsonObject);
         event MessageProcessedEventHandler^ MessageProcessed;
         void ProcessNextMessage();
@@ -96,7 +98,7 @@ namespace NetworkProxyLibrary
         std::mutex _vectorMutex;
         std::mutex _dictionaryMutex;                
 
-        String^ GetNextSequenceId(IdTypes counterType);       ; 
+        String^ GetNextSequenceId(IdTypes counterType); 
         void ProcessRequestSentMessage(Message^ message);
         void ProcessResponseReceivedMessage(Message^ message);
     };

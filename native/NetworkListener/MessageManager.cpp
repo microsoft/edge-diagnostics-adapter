@@ -76,9 +76,7 @@ void MessageManager::PostProcessMessage(JsonObject^ jsonObject)
 {     
     OutputDebugStringW(L"Enter PostProcessMessage \n");        
 
-    MessageProcessed(this, jsonObject);
-    // OutputDebugStringW(L"Execute ProcessNextMessage from PostProcessMessage \n");
-    // this->ProcessNextMessage();      
+    MessageProcessed(this, jsonObject);    
 
     OutputDebugStringW(L"Exit PostProcessMessage \n");
 }
@@ -142,7 +140,7 @@ void MessageManager::ProcessRequestSentMessage(Message ^ message)
             auto payloadLenght = reader->UnconsumedBufferLength;
             String^ payload = payloadLenght > 0 ? reader->ReadString(payloadLenght) : nullptr;
             JsonObject^ seriealizedMessage = this->GenerateRequestWilBeSentMessage(eventArgs, payload);
-            this->PostProcessMessage(seriealizedMessage);
+            this->PostProcessMessage(seriealizedMessage);            
             OutputDebugStringW(L"Exit POST ProcessRequestSentMessage \n");                
         }).then([this]()
         {                
@@ -169,17 +167,18 @@ void MessageManager::ProcessResponseReceivedMessage(Message^ message)
 {   
     OutputDebugStringW(L"Enter ProcessResponseReceivedMessage \n");
    
-    JsonObject^ serializedMessage;
+    JsonObject^ responseReceivedMessage;    
+
     try
     {
-        serializedMessage = this->GenerateResponseReceivedMessage(message->ResponseReceivedEventArgs);
+        responseReceivedMessage = this->GenerateResponseReceivedMessage(message->ResponseReceivedEventArgs);
     }
     catch (const std::exception&)
     {
         OutputDebugStringW(L"Exception calling GenerateResponseReceivedMessage \n");
     }
-    
-    if (serializedMessage == nullptr)
+        
+    if (responseReceivedMessage == nullptr)
     {
         unsigned int pendingMessages = 0;
         if (++message->ProcessingRetries <= 3)
@@ -194,14 +193,29 @@ void MessageManager::ProcessResponseReceivedMessage(Message^ message)
             auto infoMessage = std::wstring(L"WARNING: Message not processed ") + message->MessageId.ToString()->Data() + std::wstring(L"\n");
             OutputDebugStringW(infoMessage.c_str());
         }
+
+        // it is useless to process the message again if it is the only one in the queue (no new data has been received)
         if (pendingMessages > 1)
         {
             ProcessNextMessage();
         }
         return;
     }
+    else
+    {
+        // forced to do a task to calculate the content lenght of the message because the syncron method data->Message->Content->TryComputeLength(&contentLenght)
+        // is not returning anything
+        create_task(message->ResponseReceivedEventArgs->Message->Content->ReadAsBufferAsync()).then([this, responseReceivedMessage, message](IBuffer^ content)
+        {
+            auto reader = ::Windows::Storage::Streams::DataReader::FromBuffer(content);
+            auto payloadLenght = reader->UnconsumedBufferLength;
+            auto dataReceivedMessage = GenerateDataReceivedMessage(responseReceivedMessage, payloadLenght);
+            this->PostProcessMessage(dataReceivedMessage);            
+        });        
+    }
 
-    this->PostProcessMessage(serializedMessage);
+    this->PostProcessMessage(responseReceivedMessage);
+    
     OutputDebugStringW(L"Exit ProcessResponseReceivedMessage \n");
     ProcessNextMessage();
        
@@ -316,5 +330,26 @@ JsonObject^ MessageManager::GenerateResponseReceivedMessage(HttpDiagnosticProvid
     result->Insert("params", params);
     
     return result;
+}
+
+JsonObject^ MessageManager::GenerateDataReceivedMessage(JsonObject^ responseReceivedMessage, double contentLenght)
+{
+    JsonObject^ result = ref new JsonObject();
+    InsertString(result, "method", "Network.dataReceived");
+
+    JsonObject^ params = ref new JsonObject();
+    InsertString(params, "requestId", responseReceivedMessage->GetNamedObject("params")->GetNamedString("requestId"));
+    InsertNumber(params, "timestamp", responseReceivedMessage->GetNamedObject("params")->GetNamedNumber("timestamp"));
+
+    InsertNumber(params, "dataLength", contentLenght);
+    
+
+    //TODO: investigate if we can have this field
+    InsertNumber(params, "encodedDataLength", 0);
+
+    result->Insert("params", params);
+
+    return result;
+
 }
 

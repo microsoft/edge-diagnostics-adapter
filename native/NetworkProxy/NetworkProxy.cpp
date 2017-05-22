@@ -275,9 +275,9 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
             switch (wmId)
             {
             case IDM_ABOUT:                
-                SendMessageToWebSocket(L"This is a conectivity test");                  
-                /*m_networkMonitor = new NetworkMonitor(m_edgeProcessId);                
-                m_networkMonitor->StartListeningEdgeProcess(&OnMessageReceived);*/
+                //SendMessageToWebSocket(L"This is a conectivity test");                  
+                m_networkMonitor = new NetworkMonitor(m_edgeProcessId);                
+                m_networkMonitor->StartListeningEdgeProcess(&OnMessageReceived);
                 break;
             case IDM_EXIT:
                 DestroyWindow(hWnd);
