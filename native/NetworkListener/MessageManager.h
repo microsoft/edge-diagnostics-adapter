@@ -54,6 +54,7 @@ namespace NetworkProxyLibrary
         property MessageTypes MessageType { MessageTypes get() { return _messageType; } }
         property Guid MessageId { Guid get() { return _messageId; } }
         property int ProcessingRetries;
+        property long long TimeStamp;
         property HttpDiagnosticProviderRequestSentEventArgs^ RequestSentEventArgs { HttpDiagnosticProviderRequestSentEventArgs^ get() { return _requestSentEventArgs; }}
         property HttpDiagnosticProviderResponseReceivedEventArgs^ ResponseReceivedEventArgs { HttpDiagnosticProviderResponseReceivedEventArgs^ get() { return _responseReceivedEventArgs; }}
         property HttpDiagnosticProviderRequestResponseCompletedEventArgs^ RequestResponseCompletedEventArgs { HttpDiagnosticProviderRequestResponseCompletedEventArgs^ get() { return _requestResponseCompletedEventArgs; }}
@@ -62,7 +63,11 @@ namespace NetworkProxyLibrary
         void Init(Guid id)
         {
             _messageId = id;
-            ProcessingRetries = 0;
+            ProcessingRetries = 0; 
+            Windows::Globalization::Calendar^ calendar = ref new Windows::Globalization::Calendar();
+            calendar->SetToNow();
+            auto dateTime = calendar->GetDateTime();            
+            TimeStamp = dateTime.UniversalTime;
         }
         MessageTypes _messageType;
         Guid _messageId;
@@ -83,10 +88,10 @@ namespace NetworkProxyLibrary
         JsonObject^ GenerateRequestWilBeSentMessage(HttpDiagnosticProviderRequestSentEventArgs ^data, String^ postPayload = nullptr);
         JsonObject^ GenerateResponseReceivedMessage(HttpDiagnosticProviderResponseReceivedEventArgs^ data);
         JsonObject^ GenerateDataReceivedMessage(JsonObject^ responseReceivedMessage, double contentLenght);
-        
-        void PostProcessMessage(JsonObject^ jsonObject);
+        JsonObject^ GenerateLoadingFinishedMessage(HttpDiagnosticProviderRequestResponseCompletedEventArgs^ data, JsonObject^ requestMessage);        
+       
         event MessageProcessedEventHandler^ MessageProcessed;
-        void ProcessNextMessage();
+        
 
     private:        
         ~MessageManager();
@@ -94,13 +99,19 @@ namespace NetworkProxyLibrary
         int _currentMessageCounter;     
         int _idCounters[3] = {1,1,1};
         Map<Guid, JsonObject^>^ _requestSentDictionary;
-        Vector<Message^>^ _httpMessages;                        
-        std::mutex _vectorMutex;
-        std::mutex _dictionaryMutex;                
+        Vector<Message^>^ _retryQueue;
+        std::mutex _dictionaryMutex;
+        std::mutex _retryMutex;
 
+        void PostProcessMessage(JsonObject^ jsonObject);
+        void ProcessMessage(Message^ message);
         String^ GetNextSequenceId(IdTypes counterType); 
         void ProcessRequestSentMessage(Message^ message);
         void ProcessResponseReceivedMessage(Message^ message);
+        void ProcessRequestResponseCompletedMessage(Message^ message);
+        JsonObject^ GetRequestMessage(Guid id);
+        void AddMessageToQueueForRetry(Message^ message);
+        void OnMapChanged(Windows::Foundation::Collections::IObservableMap<Platform::Guid, Windows::Data::Json::JsonObject ^> ^sender, Windows::Foundation::Collections::IMapChangedEventArgs<Platform::Guid> ^event);
     };
 
 }

@@ -24,9 +24,9 @@ MessageManager::MessageManager(unsigned int processId)
     _processId = processId;
     _currentMessageCounter = 1;    
     _requestSentDictionary = ref new Map<Guid, JsonObject^>();
-    _httpMessages = ref new Vector<Message^>(); 
+    _requestSentDictionary->MapChanged += ref new MapChangedEventHandler<Guid,JsonObject ^>(this, &MessageManager::OnMapChanged);
+    _retryQueue = ref new Vector<Message^>();
 }
-
 
 MessageManager::~MessageManager()
 {
@@ -34,6 +34,7 @@ MessageManager::~MessageManager()
 
 String^ MessageManager::GetNextSequenceId(IdTypes counterType)
 {
+    // TODO: restart counter when high number is achieved
     return _processId.ToString() + "." + _idCounters[counterType]++;
 }
 
@@ -51,20 +52,9 @@ void MessageManager::SendToProcess(Message^ message)
 {
     try
     {
-        OutputDebugStringW(L"Enter SendToProcess \n");
-        _vectorMutex.lock();        
-        _httpMessages->Append(message);        
-        _vectorMutex.unlock();
-
-        if (_httpMessages->Size == 1 || _httpMessages->Size > 2)
-        {                      
-            OutputDebugStringW(L"Execute from SendToProcess \n");
-            this->ProcessNextMessage();                           
-        }
-        
-        auto mes = std::wstring(L"Exit SendToProcess ") + std::to_wstring(_httpMessages->Size) + std::wstring(L"\n");
-
-        OutputDebugStringW(mes.c_str());
+        OutputDebugStringW(L"Enter SendToProcess \n");                                     
+        this->ProcessMessage(message);                                          
+        OutputDebugStringW(L"Exit SendToProcess \n");
     }
     catch (const std::exception& ex)
     {
@@ -81,34 +71,9 @@ void MessageManager::PostProcessMessage(JsonObject^ jsonObject)
     OutputDebugStringW(L"Exit PostProcessMessage \n");
 }
 
-void MessageManager::ProcessNextMessage()
+void MessageManager::ProcessMessage(Message^ message)
 {
-    OutputDebugStringW(L"Enter ProcessNextMessage \n");   
-    Message^ message;
-    try
-    {
-        _vectorMutex.lock();
-        if (_httpMessages->Size > 0)
-        {
-            message = _httpMessages->GetAt(0);
-            _httpMessages->RemoveAt(0);
-            auto mes = std::wstring(L"ProcessNextMessage remove, total: ") + std::to_wstring(_httpMessages->Size) + std::wstring(L"\n");
-            OutputDebugStringW(mes.c_str());
-            _vectorMutex.unlock();
-        }
-        else
-        {
-            _vectorMutex.unlock();
-            OutputDebugStringW(L"Exit ProcessNextMessage 2 \n"); 
-            return;
-        }
-    }
-    // TODO catch specific expeption, process "not found message" exception
-    catch (const std::exception&)
-    {  
-        OutputDebugStringW(L"Exit ProcessNextMessage 3 \n"); 
-        return;
-    }
+    OutputDebugStringW(L"Enter ProcessNextMessage \n");           
 
     switch (message->MessageType)
     {
@@ -119,6 +84,7 @@ void MessageManager::ProcessNextMessage()
             ProcessResponseReceivedMessage(message);            
             break;
         case MessageTypes::RequestResponseCompleted:
+            ProcessRequestResponseCompletedMessage(message);
         default:
             break;
     }        
@@ -126,6 +92,8 @@ void MessageManager::ProcessNextMessage()
     OutputDebugStringW(L"Exit ProcessNextMessage \n");   
 }
 
+// Edge RequestSent message is mapped to Chrome: 
+// - Network.requestWillBeSent
 void MessageManager::ProcessRequestSentMessage(Message ^ message)
 {
     auto eventArgs = message->RequestSentEventArgs;
@@ -142,9 +110,6 @@ void MessageManager::ProcessRequestSentMessage(Message ^ message)
             JsonObject^ seriealizedMessage = this->GenerateRequestWilBeSentMessage(eventArgs, payload);
             this->PostProcessMessage(seriealizedMessage);            
             OutputDebugStringW(L"Exit POST ProcessRequestSentMessage \n");                
-        }).then([this]()
-        {                
-            this->ProcessNextMessage();
         });
     }
     else
@@ -158,73 +123,84 @@ void MessageManager::ProcessRequestSentMessage(Message ^ message)
         {
             OutputDebugStringW(L"Exception calling GenerateRequestWilBeSentMessage \n");
         }
-        OutputDebugStringW(L"Exit ProcessRequestSentMessage \n");
-        ProcessNextMessage();
+        OutputDebugStringW(L"Exit ProcessRequestSentMessage \n");      
     }
 }
 
+// Edge ResponseReceived message is mapped to Chrome:
+// - Network.responseReceived
+// - Network.dataReceived
 void MessageManager::ProcessResponseReceivedMessage(Message^ message)
 {   
     OutputDebugStringW(L"Enter ProcessResponseReceivedMessage \n");
    
     JsonObject^ responseReceivedMessage;    
-
     try
     {
-        responseReceivedMessage = this->GenerateResponseReceivedMessage(message->ResponseReceivedEventArgs);
+        responseReceivedMessage = this->GenerateResponseReceivedMessage(message->ResponseReceivedEventArgs);        
     }
-    catch (const std::exception&)
-    {
+    catch (const std::exception& x)
+    {        
         OutputDebugStringW(L"Exception calling GenerateResponseReceivedMessage \n");
     }
         
     if (responseReceivedMessage == nullptr)
     {
-        unsigned int pendingMessages = 0;
-        if (++message->ProcessingRetries <= 3)
-        {
-            _vectorMutex.lock();
-            _httpMessages->Append(message);
-            pendingMessages = _httpMessages->Size;
-            _vectorMutex.unlock();
-        }
-        else
-        {
-            auto infoMessage = std::wstring(L"WARNING: Message not processed ") + message->MessageId.ToString()->Data() + std::wstring(L"\n");
-            OutputDebugStringW(infoMessage.c_str());
-        }
-
-        // it is useless to process the message again if it is the only one in the queue (no new data has been received)
-        if (pendingMessages > 1)
-        {
-            ProcessNextMessage();
-        }
-        return;
+        AddMessageToQueueForRetry(message);        
     }
     else
-    {
-        // forced to do a task to calculate the content lenght of the message because the syncron method data->Message->Content->TryComputeLength(&contentLenght)
+    {        
+        this->PostProcessMessage(responseReceivedMessage);
+        // forced to do a task to calculate the content lenght of the message because the synchronous method data->Message->Content->TryComputeLength(&contentLenght)
         // is not returning anything
         create_task(message->ResponseReceivedEventArgs->Message->Content->ReadAsBufferAsync()).then([this, responseReceivedMessage, message](IBuffer^ content)
         {
             auto reader = ::Windows::Storage::Streams::DataReader::FromBuffer(content);
             auto payloadLenght = reader->UnconsumedBufferLength;
             auto dataReceivedMessage = GenerateDataReceivedMessage(responseReceivedMessage, payloadLenght);
-            this->PostProcessMessage(dataReceivedMessage);            
+            this->PostProcessMessage(dataReceivedMessage);
         });        
+    }          
+    OutputDebugStringW(L"Exit ProcessResponseReceivedMessage \n");        
+}
+
+// Edge RequestResponseComplete message is mapped to Chrome:
+// - Network.loadingFinished
+void MessageManager::ProcessRequestResponseCompletedMessage(Message ^ message)
+{
+    OutputDebugStringW(L"Enter ProcessRequestResponseCompletedMessage \n");
+    JsonObject^ requestMessage = GetRequestMessage(message->RequestResponseCompletedEventArgs->ActivityId);    
+    if (requestMessage == nullptr)
+    {
+        AddMessageToQueueForRetry(message);
+        OutputDebugStringW(L"Exit ProcessRequestResponseCompletedMessage 1 \n");
+        return;
     }
 
-    this->PostProcessMessage(responseReceivedMessage);
-    
-    OutputDebugStringW(L"Exit ProcessResponseReceivedMessage \n");
-    ProcessNextMessage();
-       
+    JsonObject^ requestResponseCompleted = this->GenerateLoadingFinishedMessage(message->RequestResponseCompletedEventArgs, requestMessage);
+    this->PostProcessMessage(requestResponseCompleted);
+    OutputDebugStringW(L"Exit ProcessRequestResponseCompletedMessage 2 \n");    
+}
+
+void MessageManager::AddMessageToQueueForRetry(Message^ message)
+{    
+    if (message->ProcessingRetries == 0)
+    {
+        message->ProcessingRetries++;
+        _retryMutex.lock();
+        _retryQueue->Append(message);
+        _retryMutex.unlock();
+    }
+    else
+    {
+        auto infoMessage = std::wstring(L"WARNING: Message not processed ") + message->MessageId.ToString()->Data() + std::wstring(L"\n");
+        OutputDebugStringW(infoMessage.c_str());
+    }
 }
 
 JsonObject^ SerializeHeaders(IIterator<IKeyValuePair<String^, String^>^>^ iterator)
 {
     JsonObject^ result = ref new JsonObject();
-    //auto iterator = message->Headers->First();
 
     while (iterator->HasCurrent)
     {
@@ -285,49 +261,40 @@ JsonObject ^ MessageManager::GenerateRequestWilBeSentMessage(HttpDiagnosticProvi
 
 JsonObject^ MessageManager::GenerateResponseReceivedMessage(HttpDiagnosticProviderResponseReceivedEventArgs^ data)
 {   
-    JsonObject^ result = ref new JsonObject();
-    JsonObject^ requestMessage;
+    JsonObject^ result = nullptr;
 
-    Guid id = data->ActivityId;
-    _dictionaryMutex.lock();
-    if (_requestSentDictionary->HasKey(id))
+    JsonObject^ requestMessage = GetRequestMessage(data->ActivityId);
+    if (requestMessage != nullptr) 
     {
-        requestMessage = _requestSentDictionary->Lookup(id);
-        _dictionaryMutex.unlock();
-    }
-    else
-    {
-        _dictionaryMutex.unlock();
-        return nullptr;
-    }
+        result = ref new JsonObject();
+        HttpResponseMessage^ message = data->Message;
     
-    HttpResponseMessage^ message = data->Message;
-    
-    InsertString(result, "method", "Network.responseReceived");
+        InsertString(result, "method", "Network.responseReceived");
 
-    JsonObject^ params = ref new JsonObject();
-    auto sentParams = requestMessage->GetNamedObject("params");    
-    InsertString(params, "requestId", sentParams->GetNamedString("requestId"));
-    InsertString(params, "frameId", sentParams->GetNamedString("frameId"));
-    InsertString(params, "loaderId", sentParams->GetNamedString("loaderId"));
-    auto timeInSecs = data->Timestamp.UniversalTime / (10000000);
-    InsertNumber(params, "timestamp", timeInSecs);
-    // TODO: compose the type, remove hardcoded value
-    // allowed values: Document, Stylesheet, Image, Media, Font, Script, TextTrack, XHR, Fetch, EventSource, WebSocket, Manifest, Other
-    InsertString(params, "type", "Document");
+        JsonObject^ params = ref new JsonObject();
+        auto sentParams = requestMessage->GetNamedObject("params");    
+        InsertString(params, "requestId", sentParams->GetNamedString("requestId"));
+        InsertString(params, "frameId", sentParams->GetNamedString("frameId"));
+        InsertString(params, "loaderId", sentParams->GetNamedString("loaderId"));
+        auto timeInSecs = data->Timestamp.UniversalTime / (10000000);
+        InsertNumber(params, "timestamp", timeInSecs);
+        // TODO: compose the type, remove hardcoded value
+        // allowed values: Document, Stylesheet, Image, Media, Font, Script, TextTrack, XHR, Fetch, EventSource, WebSocket, Manifest, Other
+        InsertString(params, "type", "Document");
 
-    JsonObject^ response = ref new JsonObject();
-    InsertString(response, "url", sentParams->GetNamedString("documentURL"));
-    InsertNumber(response, "status", static_cast<int>(message->StatusCode));    
-    InsertString(response, "statusText", message->ReasonPhrase);
-    response->Insert("headers", SerializeHeaders(message->Headers->First()));
-    String^ mimeType = message->Content->Headers->HasKey("Content-Type") ? message->Content->Headers->Lookup("Content-Type") : "";
-    InsertString(response, "mimeType", mimeType);      
-    response->Insert("requestHeaders", sentParams->GetNamedObject("request")->GetNamedObject("headers"));
+        JsonObject^ response = ref new JsonObject();
+        InsertString(response, "url", sentParams->GetNamedString("documentURL"));
+        InsertNumber(response, "status", static_cast<int>(message->StatusCode));    
+        InsertString(response, "statusText", message->ReasonPhrase);
+        response->Insert("headers", SerializeHeaders(message->Headers->First()));
+        String^ mimeType = message->Content->Headers->HasKey("Content-Type") ? message->Content->Headers->Lookup("Content-Type") : "";
+        InsertString(response, "mimeType", mimeType);      
+        response->Insert("requestHeaders", sentParams->GetNamedObject("request")->GetNamedObject("headers"));
 
 
-    params->Insert("response", response);
-    result->Insert("params", params);
+        params->Insert("response", response);
+        result->Insert("params", params);
+    }
     
     return result;
 }
@@ -343,13 +310,105 @@ JsonObject^ MessageManager::GenerateDataReceivedMessage(JsonObject^ responseRece
 
     InsertNumber(params, "dataLength", contentLenght);
     
-
     //TODO: investigate if we can have this field
     InsertNumber(params, "encodedDataLength", 0);
 
     result->Insert("params", params);
 
     return result;
-
 }
 
+JsonObject^ MessageManager::GetRequestMessage(Guid id)
+{    
+    JsonObject^ result = nullptr;
+
+    if (_requestSentDictionary->HasKey(id))
+    {
+        result = _requestSentDictionary->Lookup(id);        
+    }    
+    
+    return result;    
+}
+
+JsonObject^ MessageManager::GenerateLoadingFinishedMessage(HttpDiagnosticProviderRequestResponseCompletedEventArgs^ data, JsonObject^ requestMessage )
+{
+    JsonObject^ result = nullptr;
+       
+    if (requestMessage != nullptr)
+    {
+        result = ref new JsonObject();
+        InsertString(result, "method", "Network.loadingFinished");
+        JsonObject^ params = ref new JsonObject();
+        InsertString(params, "requestId", requestMessage->GetNamedObject("params")->GetNamedString("requestId"));
+        auto timeInSecs = data->Timestamps->ResponseCompletedTimestamp->Value.UniversalTime / (10000000);
+        InsertNumber(params, "timestamp", timeInSecs);
+        // information not provided by the message
+        InsertNumber(params, "encodedDataLength", 0);
+        result->Insert("params", params);
+    }
+      
+    return result;
+}
+
+bool IsOutdated(Message^ message, long long now)
+{
+    auto timeSpan = now - message->TimeStamp;
+    // 10 secs
+    if (timeSpan > 100000000)
+    {
+        return true;
+    }
+
+    return false;
+}
+
+void MessageManager::OnMapChanged(IObservableMap<Platform::Guid, JsonObject ^> ^sender, IMapChangedEventArgs<Platform::Guid> ^event)
+{   
+    Vector<Message^>^ messagesToProcess = ref new Vector<Message^>();
+    Vector<int>^ messagesToDelete = ref new Vector<int>();
+
+    if (event->CollectionChange == CollectionChange::ItemInserted)
+    {
+        auto calendar = ref new Windows::Globalization::Calendar();
+        calendar->SetToNow();
+        auto now = calendar->GetDateTime().UniversalTime;                
+
+        _retryMutex.lock();        
+        int i = 0;
+        while(i < _retryQueue->Size)
+        {     
+            auto message = _retryQueue->GetAt(i);
+            bool isProcessed = false;
+
+            if ( _requestSentDictionary->HasKey(message->MessageId))
+            {
+                messagesToProcess->Append(message);
+                isProcessed = true;
+            }
+
+            if (isProcessed || IsOutdated(message, now))
+            {
+                _retryQueue->RemoveAt(i);
+            }           
+            else 
+            {
+                i++;
+            }
+        }        
+        _retryMutex.unlock();
+
+        for each (auto message in messagesToProcess)
+        {
+            if (message->MessageType == MessageTypes::ResponseReceived)
+            {
+                ProcessResponseReceivedMessage(message);
+            }
+            else if (message->MessageType == MessageTypes::RequestResponseCompleted)
+            {
+                ProcessRequestResponseCompletedMessage(message);
+            }
+        }
+    }
+
+    
+}
