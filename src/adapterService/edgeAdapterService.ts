@@ -1,4 +1,4 @@
-//
+﻿//
 // Copyright (C) Microsoft. All rights reserved.
 //
 
@@ -42,9 +42,11 @@ export module EdgeAdapter {
         private _serverPort: number;
         private _chromeToolsPort: number;
         private _guidToIdMap: Map<string, string> = new Map<string, string>();
-        private _idToEdgeMap: Map<string, edgeAdapter.EdgeInstanceId> = new Map<string, edgeAdapter.EdgeInstanceId>();
+        private _idToEdgeMap: Map<string, edgeAdapter.EdgeInstanceId> = new Map<string, edgeAdapter.EdgeInstanceId>();        
+        private _idToNetWorkProxyMap: Map<string, edgeAdapter.NetworkProxyInstanceId> = new Map<string,edgeAdapter.NetworkProxyInstanceId>();
         private _edgeToWSMap: Map<edgeAdapter.EdgeInstanceId, ws[]> = new Map<edgeAdapter.EdgeInstanceId, ws[]>();
         private _diagLogging: boolean = false;
+        private _networkProxyMessage: Array<string> = new Array<string> ('Network.enable', 'Network.disable');
 
         constructor (diagLogging: boolean) {
             this._diagLogging = diagLogging;
@@ -137,7 +139,7 @@ export module EdgeAdapter {
                     response.end();
                     break;
             }
-        }
+        }        
 
         private onWSSConnection(ws: ws): void {
             // Normalize request url
@@ -154,17 +156,18 @@ export module EdgeAdapter {
 
             let succeeded = false;
             let instanceId: edgeAdapter.EdgeInstanceId = null;
+            let networkInstanceId: edgeAdapter.NetworkProxyInstanceId = null;
 
             if (this._guidToIdMap.has(guid)) {
                 const id = this._guidToIdMap.get(guid);
-                instanceId = this._idToEdgeMap.get(id);
+                instanceId = this._idToEdgeMap.get(id);                
                 if (!instanceId) {
                     // New connection
-                    instanceId = edgeAdapter.connectTo(id);
+                    instanceId = edgeAdapter.connectTo(id);                                                           
                     if (instanceId) {
                         this.injectAdapterFiles(instanceId);
                         this._idToEdgeMap.set(id, instanceId);
-                        this._edgeToWSMap.set(instanceId, [ws]);
+                        this._edgeToWSMap.set(instanceId, [ws]);                                              
                         succeeded = true;
                     }
                 } else {
@@ -174,15 +177,25 @@ export module EdgeAdapter {
                     this._edgeToWSMap.set(instanceId, sockets);
                     succeeded = true;
                 }
+                networkInstanceId = this._idToNetWorkProxyMap.get(id);
+                if(!networkInstanceId){                    
+                    networkInstanceId = edgeAdapter.createNetworkProxyFor(id);
+                    if(networkInstanceId){
+                        this._idToNetWorkProxyMap.set(id, networkInstanceId);
+                    }
+                }
             }
 
-            if (succeeded) {
+            if (succeeded && networkInstanceId) {
                 // Forward messages to the proxy
                 ws.on('message', (msg) => {
                     if (this._diagLogging) {
                         console.log("Client:", instanceId, msg);
-                    }
-                    edgeAdapter.forwardTo(instanceId, msg);
+                    }   
+                    if(this.isMessageForNetworkProxy(msg)){        
+                        edgeAdapter.forwardTo(networkInstanceId, msg);
+                    }                                     
+                    edgeAdapter.forwardTo(instanceId, msg);                    
                 });
 
                 const removeSocket = (instanceId: edgeAdapter.EdgeInstanceId) => {
@@ -205,10 +218,23 @@ export module EdgeAdapter {
                 // No matching Edge instance
                 ws.close();
             }
-        }
+        }        
 
         private log(message: string): void {
             this.onLogMessage(message);
+        }
+
+        private isMessageForNetworkProxy(message: any): boolean{
+            var jsonObject:any;
+            try {
+                 jsonObject = JSON.parse(message);                
+            } catch (SyntaxError) {
+                console.log("Error parsing message: ", message);
+                return false;
+            }
+            let method = jsonObject['method'] as string;
+            
+            return this._networkProxyMessage.indexOf(method) != -1;
         }
 
         private onEdgeMessage(instanceId: edgeAdapter.EdgeInstanceId, msg: string): void {

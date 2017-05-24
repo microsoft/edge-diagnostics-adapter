@@ -1,4 +1,4 @@
-//
+﻿//
 // Copyright (C) Microsoft. All rights reserved.
 //
 
@@ -44,6 +44,8 @@ NAN_MODULE_INIT(InitAll)
         Nan::GetFunction(Nan::New<FunctionTemplate>(injectScriptTo)).ToLocalChecked());
     Nan::Set(target, Nan::New("forwardTo").ToLocalChecked(),
         Nan::GetFunction(Nan::New<FunctionTemplate>(forwardTo)).ToLocalChecked());
+    Nan::Set(target, Nan::New("createNetworkProxyFor").ToLocalChecked(),
+        Nan::GetFunction(Nan::New<FunctionTemplate>(createNetworkProxyFor)).ToLocalChecked());
 }
 
 NODE_MODULE(Addon, InitAll)
@@ -217,10 +219,10 @@ NAN_METHOD(getEdgeInstances)
         id.Format("%p", instances[i].hwnd);
 
         Local<Object> obj = Nan::New<Object>();
-        Nan::Set(obj, Nan::New("id").ToLocalChecked(), Nan::New<String>(id).ToLocalChecked());
+        Nan::Set(obj, Nan::New("id").ToLocalChecked(), Nan::New<String>(id).ToLocalChecked());        
         Nan::Set(obj, Nan::New("url").ToLocalChecked(), Nan::New<String>(CStringA(instances[i].url)).ToLocalChecked());
         Nan::Set(obj, Nan::New("title").ToLocalChecked(), Nan::New<String>(CStringA(instances[i].title)).ToLocalChecked());
-        Nan::Set(obj, Nan::New("processName").ToLocalChecked(), Nan::New<String>(CStringA(instances[i].processName)).ToLocalChecked());
+        Nan::Set(obj, Nan::New("processName").ToLocalChecked(), Nan::New<String>(CStringA(instances[i].processName)).ToLocalChecked());        
 
         Nan::Set(arr, i, obj);
     }
@@ -516,7 +518,7 @@ NAN_METHOD(connectTo)
             EXIT_IF_NOT_S_OK(hr);
         }
         else
-        {
+        {            
             // Success, return the new hwnd as an id to this instance
             HWND instanceHwnd;
             hr = spSite->GetWindow(&instanceHwnd);
@@ -579,4 +581,98 @@ NAN_METHOD(forwardTo)
     String::Utf8Value message(info[1]->ToString());
     CStringA givenMessage((const char*)(*message));
     SendMessageToInstance(instanceHwnd, givenMessage);
+}
+
+//TODO: move this helper method to the Common library
+BOOL EnumThreadWindowsHelper(_In_ DWORD threadId, _In_ const function<BOOL(HWND)>& callbackFunc)
+{
+    return ::EnumThreadWindows(threadId, [](HWND hwnd, LPARAM lparam) -> BOOL {
+        return (*(function<BOOL(HWND)>*)lparam)(hwnd);
+    }, (LPARAM)&callbackFunc);
+}
+
+NAN_METHOD(createNetworkProxyFor)
+{
+    EnsureInitialized();
+    if (info.Length() < 1 || !info[0]->IsString())
+    {
+        Nan::ThrowTypeError("Incorrect arguments - createNetworkProxyFor(id: string): string");
+        return;
+    }
+
+    // TODO: the handler passed as parameter identifies the Edge page to monitor. We have to pass 
+    // this handler to the created proxy, maybe as parameter, so it can find the correct edge page.
+    // Probably instead of the process we will nedd the process Id, in case we do not have it use GetWindowThreadProcessId()
+    String::Utf8Value id(info[0]->ToString());
+#pragma warning(disable: 4312) // truncation to int
+    HWND hwnd = (HWND)::strtol((const char*)(*id), NULL, 16);
+#pragma warning(default: 4312)
+
+    info.GetReturnValue().Set(Nan::Null());
+
+    TCHAR localPath[MAX_PATH];
+    GetCurrentDirectory(MAX_PATH, localPath);
+    CString networkProxyPath;
+    //TODO: put final relative path
+    networkProxyPath.Format(L"%s\\out\\lib\\NetworkProxy.exe", localPath);
+
+    LPDWORD processId;
+    GetWindowThreadProcessId(hwnd, processId);    
+
+    CString arguments;    
+    arguments.Format(L"--process-id=%d", *processId);
+
+    // Launch the process
+    STARTUPINFO si = { 0 };
+    PROCESS_INFORMATION pi = { 0 };
+    si.cb = sizeof(si);
+    si.wShowWindow = SW_MINIMIZE;
+
+    BOOL result = ::CreateProcess(
+        networkProxyPath,
+        arguments.GetBuffer(),
+        nullptr,
+        nullptr,
+        FALSE,
+        0,
+        nullptr,
+        nullptr,
+        &si,
+        &pi);
+    arguments.ReleaseBuffer();
+
+    // give time to the process to start the windows
+    Sleep(1000);
+
+    if (result)
+    {
+        DWORD networkProcessId = pi.dwProcessId;
+        HWND proxyHwnd = nullptr;
+
+        EnumThreadWindowsHelper(pi.dwThreadId, [&](HWND hwndTop) -> BOOL
+        {
+            // TODO: to be changed the criteria when the windows is modified to be invisible
+            // Currently 3 windows appear for the thread, only one is visible
+            if (IsWindowVisible(hwndTop))
+            {
+                proxyHwnd = hwndTop;
+            }
+            return TRUE;
+        });
+
+        if (proxyHwnd != nullptr)
+        {
+            CStringA newId;
+            newId.Format("%p", proxyHwnd);
+            info.GetReturnValue().Set(Nan::New<String>(newId).ToLocalChecked());            
+        }
+        else
+        {
+            Log("NetworkProxy hwnd not found.");
+        }        
+    }
+    else
+    {
+        Log("Could not open NetworkProxy.");        
+    }        
 }
