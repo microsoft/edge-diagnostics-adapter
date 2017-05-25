@@ -60,8 +60,7 @@ void HttpListener::StartListening(std::function<void(const wchar_t*)> callback)
 void NetworkProxyLibrary::HttpListener::StopListening()
 {
     if (_provider != nullptr)
-    {
-        // TODO: verify that the unsubscribe works correctly
+    {        
         _provider->RequestSent -= _requestSentToken;
         _provider->ResponseReceived -= _responseReceivedToken;
         _provider->RequestResponseCompleted -= _requestSentToken;
@@ -112,11 +111,10 @@ void HttpListener::OnMessageProcessed(NetworkProxyLibrary::MessageManager ^sende
     DoCallback(message->Stringify()->Data());
 }
 
-// the next methjods are for printing the messages as helper for the development
+// the next methods are for printing the messages as helper for the development
 
 char* HttpListener::UTF16toUTF8(const wchar_t* utf16, int &outputSize)
-{		
-	// TODO modify this buff size, maybe use String to make it of variable size
+{			
 	const int bufferSize = 2000;
 	char buff[bufferSize];
 	int length = ::WideCharToMultiByte(CP_UTF8, 0, utf16, -1, nullptr, 0, 0, 0);
