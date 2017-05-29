@@ -212,6 +212,24 @@ JsonObject^ SerializeHeaders(IIterator<IKeyValuePair<String^, String^>^>^ iterat
     return result;
 }
 
+String^ ParseInitiator(wstring initiator) 
+{
+    vector<wstring> scriptList{ L"CrossOriginPreFlight", L"Fetch", L"Prefetch", L"XmlHttpRequest" };
+    vector<wstring> parserList{ L"HtmlDownload", L"Image", L"Link", L"Media", L"ParsedElement" };
+    if (std::find(std::begin(scriptList), std::end(scriptList), initiator) != std::end(scriptList))
+    {
+        return "script";
+    }
+    else if (std::find(std::begin(parserList), std::end(parserList), initiator) != std::end(parserList))
+    {
+        return "parser";
+    }
+    else
+    {
+        return "other";
+    }
+}
+
 JsonObject ^ MessageManager::GenerateRequestWilBeSentMessage(HttpDiagnosticProviderRequestSentEventArgs ^data, String^ postPayload)
 {
     HttpRequestMessage^ message = data->Message;
@@ -239,17 +257,13 @@ JsonObject ^ MessageManager::GenerateRequestWilBeSentMessage(HttpDiagnosticProvi
                 
     auto timeInSecs = data->Timestamp.UniversalTime / (10000000);
     InsertNumber(params,"timestamp", timeInSecs);
-
-    //TODO:  compose wall time, maybe not possible to calculate
     InsertNumber(params, "walltime", 0);
-
-
-    String^ initiator = "{\"type\": \"" + data->Initiator.ToString() + "\"}";
-    JsonValue^ initiatorValue = JsonValue::Parse(initiator);
-    params->Insert("initiator", initiatorValue);
-    // TODO: compose the type, remove hardcoded value
-    // allowed values: Document, Stylesheet, Image, Media, Font, Script, TextTrack, XHR, Fetch, EventSource, WebSocket, Manifest, Other
-    InsertString(params, "type", "Document");
+        
+    JsonObject^ initiator = ref new JsonObject();
+    InsertString(initiator, "type", ParseInitiator(data->Initiator.ToString()->Data()));
+    params->Insert("initiator", initiator);
+    
+    InsertString(params, "type", "Other");
 
     result->Insert("params", params);    
     _dictionaryMutex.lock();
