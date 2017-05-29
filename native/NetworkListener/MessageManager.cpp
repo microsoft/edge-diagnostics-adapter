@@ -5,7 +5,7 @@
 #include <iostream>
 #include <locale>
 #include <codecvt>
-
+#include <cwctype>
 #include <collection.h>
 #include <ppltasks.h>
 
@@ -230,6 +230,43 @@ String^ ParseInitiator(wstring initiator)
     }
 }
 
+bool StringContainsSubstring(wstring p_string, wstring p_substring) 
+{    
+    auto it = std::search(
+        p_string.begin(), p_string.end(),
+        p_substring.begin(), p_substring.end());
+    return (it != p_string.end());    
+}
+
+String^ ParseResourceTypeFromContentType(String^ contentType) 
+{    
+    pair<wstring, String^> resourceTypes[8]
+    { 
+        // non-mapped resource types are TextTrack, XHR, Fetch, EventSource, WebSocket
+        {L"javascript", "Script"},
+        { L"css","Stylesheet" },
+        { L"image","Image" },
+        { L"audio","Media" },
+        { L"video","Media" },
+        { L"font","Font" },
+        { L"html","Document" },
+        { L"manifest","Manifest" },
+    };
+    
+    wstring contentTypeLC = contentType->Data();
+    transform(contentTypeLC.begin(), contentTypeLC.end(), contentTypeLC.begin(), ::towlower);
+
+    for (int i = 0; i < 8; i++)
+    {
+        if (StringContainsSubstring(contentTypeLC, resourceTypes[i].first)) 
+        {
+            return resourceTypes[i].second;
+        }
+    }
+
+    return "Other";
+}
+
 JsonObject ^ MessageManager::GenerateRequestWilBeSentMessage(HttpDiagnosticProviderRequestSentEventArgs ^data, String^ postPayload)
 {
     HttpRequestMessage^ message = data->Message;
@@ -292,16 +329,20 @@ JsonObject^ MessageManager::GenerateResponseReceivedMessage(HttpDiagnosticProvid
         InsertString(params, "loaderId", sentParams->GetNamedString("loaderId"));
         auto timeInSecs = data->Timestamp.UniversalTime / (10000000);
         InsertNumber(params, "timestamp", timeInSecs);
-        // TODO: compose the type, remove hardcoded value
-        // allowed values: Document, Stylesheet, Image, Media, Font, Script, TextTrack, XHR, Fetch, EventSource, WebSocket, Manifest, Other
-        InsertString(params, "type", "Document");
+        // TODO: content type can come with lower case and we would not foind it. Case insensitive check is required.
+        String^ mimeType = message->Content->Headers->HasKey("Content-Type") ? message->Content->Headers->Lookup("Content-Type") : "";
+        if (mimeType != "") 
+        {
+            auto resourceType = ParseResourceTypeFromContentType(mimeType);
+            InsertString(params, "type", resourceType);
+        }        
 
         JsonObject^ response = ref new JsonObject();
         InsertString(response, "url", sentParams->GetNamedString("documentURL"));
         InsertNumber(response, "status", static_cast<int>(message->StatusCode));    
         InsertString(response, "statusText", message->ReasonPhrase);
         response->Insert("headers", SerializeHeaders(message->Headers->First()));
-        String^ mimeType = message->Content->Headers->HasKey("Content-Type") ? message->Content->Headers->Lookup("Content-Type") : "";
+        
         InsertString(response, "mimeType", mimeType);      
         response->Insert("requestHeaders", sentParams->GetNamedObject("request")->GetNamedObject("headers"));
 
