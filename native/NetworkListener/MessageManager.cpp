@@ -345,7 +345,7 @@ JsonObject^ MessageManager::GenerateResponseReceivedMessage(HttpDiagnosticProvid
         
         InsertString(response, "mimeType", mimeType);      
         response->Insert("requestHeaders", sentParams->GetNamedObject("request")->GetNamedObject("headers"));
-
+        InsertString(response, "protocol", message->Version.ToString());
 
         params->Insert("response", response);
         result->Insert("params", params);
