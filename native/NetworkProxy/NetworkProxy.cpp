@@ -27,13 +27,13 @@ WCHAR szWindowClass[MAX_LOADSTRING];            // the main window class name
 NetworkMonitor* m_networkMonitor;
 HWND m_serverHwnd;
 DWORD m_edgeProcessId;
+HWND m_hMainWnd;
 
 
 // Forward declarations of functions included in this code module:
 ATOM                MyRegisterClass(HINSTANCE hInstance);
 BOOL                InitInstance(HINSTANCE, int);
 LRESULT CALLBACK    WndProc(HWND, UINT, WPARAM, LPARAM);
-INT_PTR CALLBACK    About(HWND, UINT, WPARAM, LPARAM);
 void OnMessageReceived(const wchar_t* message);
 void SendMessageToWebSocket(_In_ const wchar_t* message);
 
@@ -58,7 +58,7 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
     }
         
     wstring paramValue = commandLine.substr(valuePosition + parameter.length());
-    m_edgeProcessId = _wtol(paramValue.c_str()); 
+    m_edgeProcessId = _wtol(paramValue.c_str());     
 
     // Initialize global strings
     LoadStringW(hInstance, IDS_APP_TITLE, szTitle, MAX_LOADSTRING);
@@ -75,6 +75,8 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 
     MSG msg;
 
+    ShowWindow(m_hMainWnd, SW_HIDE);
+
     // Main message loop:
     while (GetMessage(&msg, nullptr, 0, 0))
     {
@@ -83,7 +85,7 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
             TranslateMessage(&msg);
             DispatchMessage(&msg);
         }
-    }
+    }    
 
     return (int) msg.wParam;
 }
@@ -131,18 +133,20 @@ ATOM MyRegisterClass(HINSTANCE hInstance)
 //
 BOOL InitInstance(HINSTANCE hInstance, int nCmdShow)
 {
-   hInst = hInstance; // Store instance handle in our global variable
-
-   HWND hWnd = CreateWindowW(szWindowClass, szTitle, WS_OVERLAPPEDWINDOW,
-      CW_USEDEFAULT, 0, CW_USEDEFAULT, 0, nullptr, nullptr, hInstance, nullptr);
-
+   hInst = hInstance; // Store instance handle in our global variable   
+   
+   HWND hWnd = CreateWindowW(szWindowClass, nullptr, 0,
+   0, 0, 0, 0, nullptr, nullptr, hInstance, nullptr);
+   
    if (!hWnd)
    {
       return FALSE;
    }
-
-   ShowWindow(hWnd, nCmdShow);
+   
+   ShowWindow(hWnd, nCmdShow);       
    UpdateWindow(hWnd);
+
+   m_hMainWnd = hWnd;
 
    return TRUE;
 }
@@ -197,7 +201,7 @@ void OnMessageFromWebSocket(UINT nMsg, WPARAM wParam, LPARAM lParam)
         CopyDataPayload_StringMessage_Data* pMessage = reinterpret_cast<CopyDataPayload_StringMessage_Data*>(pParams->lpData);
         LPCWSTR lpString = reinterpret_cast<LPCWSTR>(reinterpret_cast<BYTE*>(pMessage) + pMessage->uMessageOffset);
         wstring message = wstring(lpString);
-
+        
         if (message.find(L"\"method\":\"Network.enable\"") != string::npos) 
         {
             if (m_networkMonitor == nullptr)
@@ -264,35 +268,15 @@ void SendMessageToWebSocket(_In_ const wchar_t* message)
 //
 //
 LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
-{
-    
+{    
     switch (message)
     {
     case WM_COMMAND:
         {
-            int wmId = LOWORD(wParam);
-            // Parse the menu selections:
-            switch (wmId)
-            {
-            case IDM_ABOUT:                
-                //SendMessageToWebSocket(L"This is a conectivity test");                  
-                m_networkMonitor = new NetworkMonitor(m_edgeProcessId);                
-                m_networkMonitor->StartListeningEdgeProcess(&OnMessageReceived);
-                break;
-            case IDM_EXIT:
-                DestroyWindow(hWnd);
-                break;
-            default:
-                return DefWindowProc(hWnd, message, wParam, lParam);
-            }
         }
         break;
     case WM_PAINT:
         {
-            PAINTSTRUCT ps;
-            HDC hdc = BeginPaint(hWnd, &ps);
-            // TODO: Add any drawing code that uses hdc here...
-            EndPaint(hWnd, &ps);
         }
         break;
     case WM_DESTROY:
@@ -302,29 +286,9 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
         OnMessageFromWebSocket(message, wParam, lParam);       
         break;
 
-    default:
-        
+    default:        
         return DefWindowProc(hWnd, message, wParam, lParam);
     }
     return 0;
 }
 
-// Message handler for about box.
-INT_PTR CALLBACK About(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam)
-{
-    UNREFERENCED_PARAMETER(lParam);
-    switch (message)
-    {
-    case WM_INITDIALOG:
-        return (INT_PTR)TRUE;
-
-    case WM_COMMAND:
-        if (LOWORD(wParam) == IDOK || LOWORD(wParam) == IDCANCEL)
-        {
-            EndDialog(hDlg, LOWORD(wParam));
-            return (INT_PTR)TRUE;
-        }
-        break;
-    }
-    return (INT_PTR)FALSE;
-}

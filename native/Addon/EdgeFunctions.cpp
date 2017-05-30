@@ -630,10 +630,7 @@ NAN_METHOD(createNetworkProxyFor)
         Nan::ThrowTypeError("Incorrect arguments - createNetworkProxyFor(id: string): string");
         return;
     }
-
-    // TODO: the handler passed as parameter identifies the Edge page to monitor. We have to pass 
-    // this handler to the created proxy, maybe as parameter, so it can find the correct edge page.
-    // Probably instead of the process we will nedd the process Id, in case we do not have it use GetWindowThreadProcessId()
+    
     String::Utf8Value id(info[0]->ToString());
 #pragma warning(disable: 4312) // truncation to int
     HWND hwnd = (HWND)::strtol((const char*)(*id), NULL, 16);
@@ -682,9 +679,7 @@ NAN_METHOD(createNetworkProxyFor)
 
         EnumThreadWindowsHelper(pi.dwThreadId, [&](HWND hwndTop) -> BOOL
         {
-            // TODO: to be changed the criteria when the windows is modified to be invisible
-            // Currently 3 windows appear for the thread, only one is visible
-            if (IsWindowVisible(hwndTop))
+            if (Helpers::IsWindowClass(hwndTop, L"NetworkProxyWindow"))
             {
                 proxyHwnd = hwndTop;
             }
