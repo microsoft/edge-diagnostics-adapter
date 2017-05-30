@@ -34,7 +34,11 @@ MessageManager::~MessageManager()
 
 String^ MessageManager::GetNextSequenceId(IdTypes counterType)
 {
-    // TODO: restart counter when high number is achieved
+    // restart counter when max number is achieved
+    if (_idCounters[counterType] == INT_MAX)
+    {
+        _idCounters[counterType] = 1;
+    }
     return _processId.ToString() + "." + _idCounters[counterType]++;
 }
 
