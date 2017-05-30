@@ -87,8 +87,7 @@ void MessageManager::ProcessMessage(Message^ message)
         case MessageTypes::ResponseReceived:
             ProcessResponseReceivedMessage(message);            
             break;
-        case MessageTypes::RequestResponseCompleted:
-            ProcessRequestResponseCompletedMessage(message);
+        case MessageTypes::RequestResponseCompleted:            
         default:
             break;
     }        
@@ -134,6 +133,7 @@ void MessageManager::ProcessRequestSentMessage(Message ^ message)
 // Edge ResponseReceived message is mapped to Chrome:
 // - Network.responseReceived
 // - Network.dataReceived
+// - Network.loadingFinished
 void MessageManager::ProcessResponseReceivedMessage(Message^ message)
 {   
     OutputDebugStringW(L"Enter ProcessResponseReceivedMessage \n");
@@ -163,27 +163,11 @@ void MessageManager::ProcessResponseReceivedMessage(Message^ message)
             auto payloadLenght = reader->UnconsumedBufferLength;
             auto dataReceivedMessage = GenerateDataReceivedMessage(responseReceivedMessage, payloadLenght);
             this->PostProcessMessage(dataReceivedMessage);
+            auto loadingFinishedMessage = GenerateLoadingFinishedMessage(responseReceivedMessage, payloadLenght);
+            this->PostProcessMessage(loadingFinishedMessage);
         });        
     }          
     OutputDebugStringW(L"Exit ProcessResponseReceivedMessage \n");        
-}
-
-// Edge RequestResponseComplete message is mapped to Chrome:
-// - Network.loadingFinished
-void MessageManager::ProcessRequestResponseCompletedMessage(Message ^ message)
-{
-    OutputDebugStringW(L"Enter ProcessRequestResponseCompletedMessage \n");
-    JsonObject^ requestMessage = GetRequestMessage(message->RequestResponseCompletedEventArgs->ActivityId);    
-    if (requestMessage == nullptr)
-    {
-        AddMessageToQueueForRetry(message);
-        OutputDebugStringW(L"Exit ProcessRequestResponseCompletedMessage 1 \n");
-        return;
-    }
-
-    JsonObject^ requestResponseCompleted = this->GenerateLoadingFinishedMessage(message->RequestResponseCompletedEventArgs, requestMessage);
-    this->PostProcessMessage(requestResponseCompleted);
-    OutputDebugStringW(L"Exit ProcessRequestResponseCompletedMessage 2 \n");    
 }
 
 void MessageManager::AddMessageToQueueForRetry(Message^ message)
@@ -389,22 +373,21 @@ JsonObject^ MessageManager::GetRequestMessage(Guid id)
     return result;    
 }
 
-JsonObject^ MessageManager::GenerateLoadingFinishedMessage(HttpDiagnosticProviderRequestResponseCompletedEventArgs^ data, JsonObject^ requestMessage )
+JsonObject^ MessageManager::GenerateLoadingFinishedMessage(JsonObject^ responseReceivedMessage, double contentLenght)
 {
     JsonObject^ result = nullptr;
-       
-    if (requestMessage != nullptr)
-    {
-        result = ref new JsonObject();
-        InsertString(result, "method", "Network.loadingFinished");
-        JsonObject^ params = ref new JsonObject();
-        InsertString(params, "requestId", requestMessage->GetNamedObject("params")->GetNamedString("requestId"));
-        auto timeInSecs = data->Timestamps->ResponseCompletedTimestamp->Value.UniversalTime / (10000000);
-        InsertNumber(params, "timestamp", timeInSecs);
-        // information not provided by the message
-        InsertNumber(params, "encodedDataLength", 0);
-        result->Insert("params", params);
-    }
+    
+    JsonObject^ responseParams = responseReceivedMessage->GetNamedObject("params");
+    
+    result = ref new JsonObject();
+    InsertString(result, "method", "Network.loadingFinished");
+    JsonObject^ params = ref new JsonObject();
+    InsertString(params, "requestId", responseParams->GetNamedString("requestId"));    
+    InsertNumber(params, "timestamp", responseParams->GetNamedNumber("timestamp"));
+    // information not provided by the message
+    InsertNumber(params, "encodedDataLength", 0);
+    result->Insert("params", params);
+   
       
     return result;
 }
@@ -461,10 +444,6 @@ void MessageManager::OnMapChanged(IObservableMap<Platform::Guid, JsonObject ^> ^
             if (message->MessageType == MessageTypes::ResponseReceived)
             {
                 ProcessResponseReceivedMessage(message);
-            }
-            else if (message->MessageType == MessageTypes::RequestResponseCompleted)
-            {
-                ProcessRequestResponseCompletedMessage(message);
             }
         }
     }

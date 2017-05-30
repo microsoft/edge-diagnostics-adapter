@@ -88,7 +88,7 @@ namespace NetworkProxyLibrary
         JsonObject^ GenerateRequestWilBeSentMessage(HttpDiagnosticProviderRequestSentEventArgs ^data, String^ postPayload = nullptr);
         JsonObject^ GenerateResponseReceivedMessage(HttpDiagnosticProviderResponseReceivedEventArgs^ data);
         JsonObject^ GenerateDataReceivedMessage(JsonObject^ responseReceivedMessage, double contentLenght);
-        JsonObject^ GenerateLoadingFinishedMessage(HttpDiagnosticProviderRequestResponseCompletedEventArgs^ data, JsonObject^ requestMessage);        
+        JsonObject^ GenerateLoadingFinishedMessage(JsonObject^ responseReceivedMessage, double contentLenght);
        
         event MessageProcessedEventHandler^ MessageProcessed;
         
@@ -107,8 +107,7 @@ namespace NetworkProxyLibrary
         void ProcessMessage(Message^ message);
         String^ GetNextSequenceId(IdTypes counterType); 
         void ProcessRequestSentMessage(Message^ message);
-        void ProcessResponseReceivedMessage(Message^ message);
-        void ProcessRequestResponseCompletedMessage(Message^ message);
+        void ProcessResponseReceivedMessage(Message^ message);        
         JsonObject^ GetRequestMessage(Guid id);
         void AddMessageToQueueForRetry(Message^ message);
         void OnMapChanged(Windows::Foundation::Collections::IObservableMap<Platform::Guid, Windows::Data::Json::JsonObject ^> ^sender, Windows::Foundation::Collections::IMapChangedEventArgs<Platform::Guid> ^event);

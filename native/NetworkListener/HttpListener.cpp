@@ -80,8 +80,8 @@ void HttpListener::OnResponseReceived(HttpDiagnosticProvider ^sender, HttpDiagno
 
 void HttpListener::OnRequestResponseCompleted(HttpDiagnosticProvider ^sender, HttpDiagnosticProviderRequestResponseCompletedEventArgs ^args)
 {
-    _messageManager->SendToProcess(ref new Message(args));
-	OutputDebugStringW(L"OnRequestResponseCompleted \n");
+    // currently we do not use this event
+   // _messageManager->SendToProcess(ref new Message(args));	
 }
 
 void HttpListener::DoCallback(const wchar_t* notification)
