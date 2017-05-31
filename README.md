@@ -34,7 +34,7 @@ Navigate to [localhost:9222](http://localhost:9222). You'll see a listing of all
 
 ## Supported features and API
 
-See [supported features and API](https://github.com/Microsoft/EdgeDiagnosticsAdapter/wiki/Supported-features-and-API) or download the [protocol.json]().
+See [supported features and API](https://github.com/Microsoft/EdgeDiagnosticsAdapter/wiki/Supported-features-and-API) or download the [protocol.json](https://github.com/Microsoft/edge-diagnostics-adapter/blob/master/src/chromeProtocol/protocol.json).
 
 ## Building & Contributing
 To build and contribute to this project take a gander at the wiki pages on [building](https://github.com/Microsoft/EdgeDiagnosticsAdapter/wiki/Building) and contributing (coming soon).
