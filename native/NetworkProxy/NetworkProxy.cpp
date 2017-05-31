@@ -46,7 +46,6 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
     UNREFERENCED_PARAMETER(lpCmdLine);
 
     // TODO: Place code here.
-    //Sleep(15000);
     const wstring parameter = L"--process-id=";
     wstring commandLine = GetCommandLine();
     auto valuePosition = commandLine.find(parameter.c_str());
@@ -151,7 +150,6 @@ BOOL InitInstance(HINSTANCE hInstance, int nCmdShow)
    return TRUE;
 }
 
-//TODO: remove it because it is duplicated code and include Messages.h to use original copy
 #pragma pack(push, 1)
 struct CopyDataPayload_StringMessage_Data
 {
@@ -159,14 +157,12 @@ struct CopyDataPayload_StringMessage_Data
 };
 #pragma pack(pop)
 
-//TODO: remove it because it is duplicated code and include Messages.h to use original copy
 void FreeCopyDataStructCopy(_In_ PCOPYDATASTRUCT pCopyDataStructCopy)
 {
     delete[](BYTE*) pCopyDataStructCopy->lpData;
     delete pCopyDataStructCopy;
 }
 
-//TODO: remove it because it is duplicated code and include Messages.h to use original copy
 PCOPYDATASTRUCT MakeCopyDataStructCopy(_In_ const PCOPYDATASTRUCT pCopyDataStruct)
 {
     PCOPYDATASTRUCT const pCopyDataStructCopy = new COPYDATASTRUCT;
@@ -179,7 +175,6 @@ PCOPYDATASTRUCT MakeCopyDataStructCopy(_In_ const PCOPYDATASTRUCT pCopyDataStruc
     return pCopyDataStructCopy;
 }
 
-//TODO: remove it because it is duplicated code and include Messages.h to use original copy
 enum CopyDataPayload_ProcSignature : ULONG_PTR
 {
     StringMessage_Signature

@@ -320,8 +320,7 @@ JsonObject^ MessageManager::GenerateResponseReceivedMessage(HttpDiagnosticProvid
         InsertString(params, "frameId", sentParams->GetNamedString("frameId"));
         InsertString(params, "loaderId", sentParams->GetNamedString("loaderId"));
         auto timeInSecs = data->Timestamp.UniversalTime / (10000000);
-        InsertNumber(params, "timestamp", timeInSecs);
-        // TODO: content type can come with lower case and we would not foind it. Case insensitive check is required.
+        InsertNumber(params, "timestamp", timeInSecs);        
         String^ mimeType = message->Content->Headers->HasKey("Content-Type") ? message->Content->Headers->Lookup("Content-Type") : "";
         if (mimeType != "") 
         {
