@@ -109,8 +109,9 @@ namespace NetworkProxyLibrary
         void ProcessRequestSentMessage(Message^ message);
         void ProcessResponseReceivedMessage(Message^ message);        
         JsonObject^ GetRequestMessage(Guid id);
+        void DeleteRequestMessage(Guid id);
         void AddMessageToQueueForRetry(Message^ message);
-        void OnMapChanged(Windows::Foundation::Collections::IObservableMap<Platform::Guid, Windows::Data::Json::JsonObject ^> ^sender, Windows::Foundation::Collections::IMapChangedEventArgs<Platform::Guid> ^event);
+        void OnRequestInsertedToMap(Guid id);
     };
 
 }

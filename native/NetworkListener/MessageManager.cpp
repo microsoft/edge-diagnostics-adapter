@@ -24,7 +24,6 @@ MessageManager::MessageManager(unsigned int processId)
     _processId = processId;
     _currentMessageCounter = 1;    
     _requestSentDictionary = ref new Map<Guid, JsonObject^>();
-    _requestSentDictionary->MapChanged += ref new MapChangedEventHandler<Guid,JsonObject ^>(this, &MessageManager::OnMapChanged);
     _retryQueue = ref new Vector<Message^>();
 }
 
@@ -157,7 +156,7 @@ void MessageManager::ProcessResponseReceivedMessage(Message^ message)
         this->PostProcessMessage(responseReceivedMessage);
         // forced to do a task to calculate the content lenght of the message because the synchronous method data->Message->Content->TryComputeLength(&contentLenght)
         // is not returning anything
-        create_task(message->ResponseReceivedEventArgs->Message->Content->ReadAsBufferAsync()).then([this, responseReceivedMessage, message](IBuffer^ content)
+        create_task(message->ResponseReceivedEventArgs->Message->Content->ReadAsBufferAsync()).then([this, responseReceivedMessage](IBuffer^ content)
         {
             auto reader = ::Windows::Storage::Streams::DataReader::FromBuffer(content);
             auto payloadLenght = reader->UnconsumedBufferLength;
@@ -165,7 +164,10 @@ void MessageManager::ProcessResponseReceivedMessage(Message^ message)
             this->PostProcessMessage(dataReceivedMessage);
             auto loadingFinishedMessage = GenerateLoadingFinishedMessage(responseReceivedMessage, payloadLenght);
             this->PostProcessMessage(loadingFinishedMessage);
-        });        
+            
+        }); 
+        // request message has been used for all the possible response messages --> can be deleted from the dictionary
+        DeleteRequestMessage(message->ResponseReceivedEventArgs->ActivityId);
     }          
     OutputDebugStringW(L"Exit ProcessResponseReceivedMessage \n");        
 }
@@ -295,6 +297,8 @@ JsonObject ^ MessageManager::GenerateRequestWilBeSentMessage(HttpDiagnosticProvi
     _requestSentDictionary->Insert(data->ActivityId, result);
     _dictionaryMutex.unlock();
 
+    OnRequestInsertedToMap(data->ActivityId);
+
     return result;
 }
 
@@ -373,6 +377,50 @@ JsonObject^ MessageManager::GetRequestMessage(Guid id)
     return result;    
 }
 
+bool IsOutdated(long long timeStamp, long long now, int timeoutSecs)
+{
+    auto timeSpan = now - timeStamp;
+    // timestamps are in 10^-7 secs format
+    if (timeSpan > (timeoutSecs * 10000000))
+    {
+        return true;
+    }
+
+    return false;
+}
+
+void MessageManager::DeleteRequestMessage(Guid id) 
+{
+    _dictionaryMutex.lock();
+    if (_requestSentDictionary->HasKey(id))
+    {
+        _requestSentDictionary->Remove(id);
+    }
+
+    // clean old requests in case they have not been explicitly called for being removed
+    auto calendar = ref new Windows::Globalization::Calendar();
+    calendar->SetToNow();
+    auto now = calendar->GetDateTime().UniversalTime;
+    Vector<Guid>^ messagesToDelete = ref new Vector<Guid>();    
+    auto iterator = _requestSentDictionary->First();
+    while (iterator->HasCurrent)
+    {
+        auto item = iterator->Current->Value;
+        // convert timestamp from secs to the standard date time format, 10^-7 secs  
+        long long timeStamp = item->GetNamedObject("params")->GetNamedNumber("timestamp") * 10000000;
+        if (IsOutdated(timeStamp, now, 60))
+        {
+            messagesToDelete->Append(iterator->Current->Key);
+        }
+        iterator->MoveNext();
+    }    
+    for each (auto id in messagesToDelete)
+    {
+        _requestSentDictionary->Remove(id);
+    }
+    _dictionaryMutex.unlock();
+}
+
 JsonObject^ MessageManager::GenerateLoadingFinishedMessage(JsonObject^ responseReceivedMessage, double contentLenght)
 {
     JsonObject^ result = nullptr;
@@ -392,61 +440,44 @@ JsonObject^ MessageManager::GenerateLoadingFinishedMessage(JsonObject^ responseR
     return result;
 }
 
-bool IsOutdated(Message^ message, long long now)
-{
-    auto timeSpan = now - message->TimeStamp;
-    // 10 secs
-    if (timeSpan > 100000000)
-    {
-        return true;
-    }
-
-    return false;
-}
-
-void MessageManager::OnMapChanged(IObservableMap<Platform::Guid, JsonObject ^> ^sender, IMapChangedEventArgs<Platform::Guid> ^event)
+void MessageManager::OnRequestInsertedToMap(Guid id)
 {   
     Vector<Message^>^ messagesToProcess = ref new Vector<Message^>();
-    Vector<int>^ messagesToDelete = ref new Vector<int>();
+    Vector<int>^ messagesToDelete = ref new Vector<int>();    
+   
+    auto calendar = ref new Windows::Globalization::Calendar();
+    calendar->SetToNow();
+    auto now = calendar->GetDateTime().UniversalTime;                
 
-    if (event->CollectionChange == CollectionChange::ItemInserted)
-    {
-        auto calendar = ref new Windows::Globalization::Calendar();
-        calendar->SetToNow();
-        auto now = calendar->GetDateTime().UniversalTime;                
+    _retryMutex.lock();        
+    int i = 0;
+    while(i < _retryQueue->Size)
+    {     
+        auto message = _retryQueue->GetAt(i);
+        bool isProcessed = false;
 
-        _retryMutex.lock();        
-        int i = 0;
-        while(i < _retryQueue->Size)
-        {     
-            auto message = _retryQueue->GetAt(i);
-            bool isProcessed = false;
-
-            if ( _requestSentDictionary->HasKey(message->MessageId))
-            {
-                messagesToProcess->Append(message);
-                isProcessed = true;
-            }
-
-            if (isProcessed || IsOutdated(message, now))
-            {
-                _retryQueue->RemoveAt(i);
-            }           
-            else 
-            {
-                i++;
-            }
-        }        
-        _retryMutex.unlock();
-
-        for each (auto message in messagesToProcess)
+        if ( _requestSentDictionary->HasKey(message->MessageId))
         {
-            if (message->MessageType == MessageTypes::ResponseReceived)
-            {
-                ProcessResponseReceivedMessage(message);
-            }
+            messagesToProcess->Append(message);
+            isProcessed = true;
         }
-    }
 
-    
+        if (isProcessed || IsOutdated(message->TimeStamp, now, 10))
+        {
+            _retryQueue->RemoveAt(i);
+        }           
+        else 
+        {
+            i++;
+        }
+    }        
+    _retryMutex.unlock();        
+
+    for each (auto message in messagesToProcess)
+    {
+        if (message->MessageType == MessageTypes::ResponseReceived)
+        {
+            ProcessResponseReceivedMessage(message);
+        }
+    }          
 }
