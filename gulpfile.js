@@ -16,6 +16,7 @@ const tslint = require('gulp-tslint');
 const msbuild = require("gulp-msbuild");
 const argv = require('yargs').argv;
 var exec = require('child_process').exec;
+var gulpSequence = require('gulp-sequence');
 
 var sources = [
     'src',
@@ -86,6 +87,7 @@ function getNativeBuildOptions() {
     const arch = (argv.x64 ? 'x64' : 'Win32');
     const verbose = (argv.verbose ? '' : 'ErrorsOnly;WarningsOnly')
     const outDir = 'out/native/' + config + '/' + arch + '/';
+    const networkOutDir = 'out/native/network/' + config + '/' + arch + '/';
     const outArch =  (argv.x64 ? '64' : '');
 
     return {
@@ -94,13 +96,31 @@ function getNativeBuildOptions() {
         arch: arch,
         verbose: verbose,
         outDir: outDir,
+        networkOutDir: networkOutDir,
         outArch: outArch
     }
 }
 
-gulp.task('buildnativeprojects', function() {
+gulp.task('buildnativeprojects',['buildnativeproxy', 'buildnativenetworkproxy']);
+
+gulp.task('buildnativeproxy', function() {
     const opts = getNativeBuildOptions();
     return gulp.src('native/Proxy/Proxy.vcxproj', { base: '.' })
+            .pipe(msbuild({
+                targets: [opts.target],
+                configuration: opts.config,
+                properties: { Platform: opts.arch },
+                stdout: true,
+                stderr: true,
+                logCommand: true,
+                toolsVersion:14,
+                consoleLoggerParameters: opts.verbose
+            }));
+});
+
+gulp.task('buildnativenetworkproxy', function() {
+    const opts = getNativeBuildOptions();
+    return gulp.src('native/NetworkProxy/NetworkProxy.vcxproj', { base: '.' })
             .pipe(msbuild({
                 targets: [opts.target],
                 configuration: opts.config,
@@ -125,7 +145,7 @@ gulp.task('buildnativeaddon', ['buildnativeprojects'], function(done) {
     });
 });
 
-gulp.task('buildnative', ['buildnativeaddon','copyproxy']);
+gulp.task('buildnative', gulpSequence(['buildnativeaddon'], ['copyproxy', 'copynetworkproxy']));
 
 
 gulp.task('copyproxy', function()  {
@@ -134,6 +154,15 @@ gulp.task('copyproxy', function()  {
                 opts.outDir + 'Proxy' + opts.outArch + '.dll',
                 opts.outDir + 'Proxy' + opts.outArch + '.pdb'
             ], { base: opts.outDir })
+            .pipe(gulp.dest('out/lib'));
+});
+
+gulp.task('copynetworkproxy', function()  {
+    const opts = getNativeBuildOptions();
+    return gulp.src([
+                opts.networkOutDir + 'NetworkProxy.exe',
+                opts.networkOutDir + 'NetworkProxy.pdb'
+            ])
             .pipe(gulp.dest('out/lib'));
 });
 
