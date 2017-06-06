@@ -345,7 +345,7 @@ export module EdgeAdapter {
 
         private createGuid(): string {
             const g: string = crypto.createHash('md5').update(Math.random().toString()).digest('hex').toUpperCase();
-            return `${g.substring(0, 8)}-${g.substring(9, 13)}-${g.substring(13, 17)}-${g.substring(17, 21)}-${g.substring(21, 31)}`
+            return `${g.substring(0, 8)}-${g.substring(9, 13)}-${g.substring(13, 17)}-${g.substring(17, 21)}-${g.substring(21, 31)}`            
         }
 
         private extractParametersFromUrl(url: string): {url:string, paramChain: string}{
@@ -369,9 +369,29 @@ export module EdgeAdapter {
         private closeEdgeInstance(guid: string): boolean{
             var result = false;
 
-            const id = this._guidToIdMap.get(guid.toLocaleUpperCase());
-            if(id){
+            const id = this._guidToIdMap.get(guid.toLocaleUpperCase());            
+            if(id){                
                 result = edgeAdapter.closeEdge(id);
+                if(result){
+                    const networkInstanceId = this._idToNetWorkProxyMap.get(id);
+                    if(networkInstanceId){
+                        edgeAdapter.closeNetworkProxyInstance(networkInstanceId);
+                    }
+                    // tab is closed, clean all the mappings and close connections                    
+                    let instanceId = this._idToEdgeMap.get(id);
+                    const sockets = this._edgeToWSMap.get(instanceId)
+                    if(sockets){
+                        for (let i = 0; i < sockets.length; i++) {
+                            sockets[i].removeAllListeners();
+                            sockets[i].close();
+                        }
+                    }
+                    this._edgeToWSMap.delete(instanceId);
+                    this._guidToIdMap.delete(guid.toLocaleUpperCase());
+                    this._guidToIdMap.delete(id);                    
+                    this._idToNetWorkProxyMap.delete(id);                    
+                    this._idToEdgeMap.delete(id);                    
+                }
             }
             return result;
         }

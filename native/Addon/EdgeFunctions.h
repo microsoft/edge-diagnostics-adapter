@@ -17,3 +17,4 @@ NAN_METHOD(connectTo);
 NAN_METHOD(injectScriptTo);
 NAN_METHOD(forwardTo);
 NAN_METHOD(createNetworkProxyFor);
+NAN_METHOD(closeNetworkProxyInstance);

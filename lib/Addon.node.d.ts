@@ -12,3 +12,4 @@ export function connectTo(id: string): EdgeInstanceId;
 export function injectScriptTo(instanceId: EdgeInstanceId, engine: EngineType, filename: string, script: string): void
 export function forwardTo(instanceId: EdgeInstanceId, message: string): void;
 export function createNetworkProxyFor(id: string): NetworkProxyInstanceId;
+export function closeNetworkProxyInstance(id: NetworkProxyInstanceId): boolean;
