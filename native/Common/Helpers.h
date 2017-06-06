@@ -1,4 +1,4 @@
-//
+﻿//
 // Copyright (C) Microsoft. All rights reserved.
 //
 
@@ -43,5 +43,6 @@ namespace Helpers
     HRESULT OpenUrlInMicrosoftEdge(_In_ PCWSTR url);
     HRESULT KillAllProcessByExe(const wchar_t *filename);
     HRESULT GetEdgePackageFamilyName(_Out_ CString& packageFullName);
+    HRESULT CloseWindow(_In_ const HWND hwnd);
 }
 
