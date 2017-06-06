@@ -162,7 +162,7 @@ void MessageManager::ProcessResponseReceivedMessage(Message^ message)
             auto payloadLenght = reader->UnconsumedBufferLength;
             auto dataReceivedMessage = GenerateDataReceivedMessage(responseReceivedMessage, payloadLenght);
             this->PostProcessMessage(dataReceivedMessage);
-            auto loadingFinishedMessage = GenerateLoadingFinishedMessage(responseReceivedMessage, payloadLenght);
+            auto loadingFinishedMessage = GenerateLoadingFinishedMessage(dataReceivedMessage);
             this->PostProcessMessage(loadingFinishedMessage);
             
         }); 
@@ -188,17 +188,20 @@ void MessageManager::AddMessageToQueueForRetry(Message^ message)
     }
 }
 
-JsonObject^ SerializeHeaders(IIterator<IKeyValuePair<String^, String^>^>^ iterator)
+void AppendHeaders(JsonObject^ headersJson, IIterator<IKeyValuePair<String^, String^>^>^ iterator) 
 {
-    JsonObject^ result = ref new JsonObject();
-
     while (iterator->HasCurrent)
     {
         auto header = iterator->Current;
-        InsertString(result, header->Key, header->Value);
+        InsertString(headersJson, header->Key, header->Value);
         iterator->MoveNext();
     }
+}
 
+JsonObject^ SerializeHeaders(IIterator<IKeyValuePair<String^, String^>^>^ iterator)
+{
+    JsonObject^ result = ref new JsonObject();    
+    AppendHeaders(result, iterator);
     return result;
 }
 
@@ -228,6 +231,13 @@ bool StringContainsSubstring(wstring p_string, wstring p_substring)
     return (it != p_string.end());    
 }
 
+wstring ToLower(wstring text) 
+{
+    wstring result = text;
+    transform(result.begin(), result.end(), result.begin(), ::towlower);
+    return result;
+}
+
 String^ ParseResourceTypeFromContentType(String^ contentType) 
 {    
     pair<wstring, String^> resourceTypes[8]
@@ -242,12 +252,11 @@ String^ ParseResourceTypeFromContentType(String^ contentType)
         { L"html","Document" },
         { L"manifest","Manifest" },
     };
-    
-    wstring contentTypeLC = contentType->Data();
-    transform(contentTypeLC.begin(), contentTypeLC.end(), contentTypeLC.begin(), ::towlower);
+     
+    wstring contentTypeLC = ToLower(contentType->Data());
 
     for (int i = 0; i < 8; i++)
-    {
+    {        
         if (StringContainsSubstring(contentTypeLC, resourceTypes[i].first)) 
         {
             return resourceTypes[i].second;
@@ -302,6 +311,24 @@ JsonObject ^ MessageManager::GenerateRequestWilBeSentMessage(HttpDiagnosticProvi
     return result;
 }
 
+String^ TryToGetContentTypeHeaderValue(IIterator<IKeyValuePair<String^, String^>^>^ iterator)
+{
+    String^ result = "";
+    while (iterator->HasCurrent)
+    {
+        auto header = iterator->Current;
+        wstring headerKeyLC = ToLower(header->Key->Data());
+        if (headerKeyLC == L"content-type")
+        {
+            result = header->Value;
+            break;
+        }
+        iterator->MoveNext();
+    }
+
+    return result;
+}
+
 JsonObject^ MessageManager::GenerateResponseReceivedMessage(HttpDiagnosticProviderResponseReceivedEventArgs^ data)
 {   
     JsonObject^ result = nullptr;
@@ -321,7 +348,7 @@ JsonObject^ MessageManager::GenerateResponseReceivedMessage(HttpDiagnosticProvid
         InsertString(params, "loaderId", sentParams->GetNamedString("loaderId"));
         auto timeInSecs = data->Timestamp.UniversalTime / (10000000);
         InsertNumber(params, "timestamp", timeInSecs);        
-        String^ mimeType = message->Content->Headers->HasKey("Content-Type") ? message->Content->Headers->Lookup("Content-Type") : "";
+        String^ mimeType = TryToGetContentTypeHeaderValue(message->Content->Headers->First());
         if (mimeType != "") 
         {
             auto resourceType = ParseResourceTypeFromContentType(mimeType);
@@ -332,7 +359,10 @@ JsonObject^ MessageManager::GenerateResponseReceivedMessage(HttpDiagnosticProvid
         InsertString(response, "url", sentParams->GetNamedString("documentURL"));
         InsertNumber(response, "status", static_cast<int>(message->StatusCode));    
         InsertString(response, "statusText", message->ReasonPhrase);
-        response->Insert("headers", SerializeHeaders(message->Headers->First()));
+
+        JsonObject^ headers = SerializeHeaders(message->Headers->First());
+        AppendHeaders(headers, message->Content->Headers->First());
+        response->Insert("headers", headers);
         
         InsertString(response, "mimeType", mimeType);      
         response->Insert("requestHeaders", sentParams->GetNamedObject("request")->GetNamedObject("headers"));
@@ -342,6 +372,46 @@ JsonObject^ MessageManager::GenerateResponseReceivedMessage(HttpDiagnosticProvid
         result->Insert("params", params);
     }
     
+    return result;
+}
+
+bool ContainsAnyEncodingHeader(JsonObject^ headers)
+{
+    bool headerFound = false;
+    auto iterator = headers->First();
+    while (iterator->HasCurrent)
+    {
+        auto header = iterator->Current;
+        wstring headerKeyLC = ToLower(header->Key->Data());        
+        
+        if (StringContainsSubstring(headerKeyLC, L"encoding"))
+        {
+            headerFound = true;
+            break;
+        }
+        iterator->MoveNext();
+    }
+
+    return headerFound;
+}
+
+double TryGetContentLengthHeaderValue(JsonObject^ headers)
+{
+    double result = 0;
+    auto iterator = headers->First();
+    //Search content-lenght header
+    while (iterator->HasCurrent)
+    {
+        auto header = iterator->Current;
+        wstring headerKeyLC = ToLower(header->Key->Data());        
+        if (headerKeyLC == L"content-length")
+        {
+            result = _wtol((header->Value->GetString()->Data()));
+            break;
+        }
+        iterator->MoveNext();
+    }
+
     return result;
 }
 
@@ -356,8 +426,14 @@ JsonObject^ MessageManager::GenerateDataReceivedMessage(JsonObject^ responseRece
 
     InsertNumber(params, "dataLength", contentLenght);
     
-    //TODO: investigate if we can have this field
-    InsertNumber(params, "encodedDataLength", 0);
+    auto headers = responseReceivedMessage->GetNamedObject("params")->GetNamedObject("response")->GetNamedObject("headers");
+    double encodedBytes = 0;
+    if (ContainsAnyEncodingHeader(headers))
+    {
+        // "Content-Length"
+        encodedBytes = TryGetContentLengthHeaderValue(headers);
+    }    
+    InsertNumber(params, "encodedDataLength", encodedBytes);    
 
     result->Insert("params", params);
 
@@ -420,22 +496,20 @@ void MessageManager::DeleteRequestMessage(Guid id)
     _dictionaryMutex.unlock();
 }
 
-JsonObject^ MessageManager::GenerateLoadingFinishedMessage(JsonObject^ responseReceivedMessage, double contentLenght)
+JsonObject^ MessageManager::GenerateLoadingFinishedMessage(JsonObject^ dataReceivedMessage)
 {
     JsonObject^ result = nullptr;
     
-    JsonObject^ responseParams = responseReceivedMessage->GetNamedObject("params");
+    JsonObject^ dataReceivedParams = dataReceivedMessage->GetNamedObject("params");
     
     result = ref new JsonObject();
     InsertString(result, "method", "Network.loadingFinished");
     JsonObject^ params = ref new JsonObject();
-    InsertString(params, "requestId", responseParams->GetNamedString("requestId"));    
-    InsertNumber(params, "timestamp", responseParams->GetNamedNumber("timestamp"));
-    // information not provided by the message
-    InsertNumber(params, "encodedDataLength", 0);
+    InsertString(params, "requestId", dataReceivedParams->GetNamedString("requestId"));    
+    InsertNumber(params, "timestamp", dataReceivedParams->GetNamedNumber("timestamp"));
+    InsertNumber(params, "encodedDataLength", dataReceivedParams->GetNamedNumber("encodedDataLength"));
     result->Insert("params", params);
-   
-      
+         
     return result;
 }
 

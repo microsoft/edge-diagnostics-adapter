@@ -88,7 +88,7 @@ namespace NetworkProxyLibrary
         JsonObject^ GenerateRequestWilBeSentMessage(HttpDiagnosticProviderRequestSentEventArgs ^data, String^ postPayload = nullptr);
         JsonObject^ GenerateResponseReceivedMessage(HttpDiagnosticProviderResponseReceivedEventArgs^ data);
         JsonObject^ GenerateDataReceivedMessage(JsonObject^ responseReceivedMessage, double contentLenght);
-        JsonObject^ GenerateLoadingFinishedMessage(JsonObject^ responseReceivedMessage, double contentLenght);
+        JsonObject^ GenerateLoadingFinishedMessage(JsonObject^ dataReceivedMessage);
        
         event MessageProcessedEventHandler^ MessageProcessed;
         
