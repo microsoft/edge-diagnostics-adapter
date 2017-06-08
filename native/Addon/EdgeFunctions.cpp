@@ -1,4 +1,4 @@
-//
+﻿//
 // Copyright (C) Microsoft. All rights reserved.
 //
 
@@ -34,6 +34,8 @@ NAN_MODULE_INIT(InitAll)
         Nan::GetFunction(Nan::New<FunctionTemplate>(setSecurityACLs)).ToLocalChecked());
     Nan::Set(target, Nan::New("openEdge").ToLocalChecked(),
         Nan::GetFunction(Nan::New<FunctionTemplate>(openEdge)).ToLocalChecked());
+    Nan::Set(target, Nan::New("closeEdge").ToLocalChecked(),
+        Nan::GetFunction(Nan::New<FunctionTemplate>(closeEdge)).ToLocalChecked());
     Nan::Set(target, Nan::New("killAll").ToLocalChecked(),
         Nan::GetFunction(Nan::New<FunctionTemplate>(killAll)).ToLocalChecked());
     Nan::Set(target, Nan::New("serveChromeDevTools").ToLocalChecked(),
@@ -44,6 +46,10 @@ NAN_MODULE_INIT(InitAll)
         Nan::GetFunction(Nan::New<FunctionTemplate>(injectScriptTo)).ToLocalChecked());
     Nan::Set(target, Nan::New("forwardTo").ToLocalChecked(),
         Nan::GetFunction(Nan::New<FunctionTemplate>(forwardTo)).ToLocalChecked());
+    Nan::Set(target, Nan::New("createNetworkProxyFor").ToLocalChecked(),
+        Nan::GetFunction(Nan::New<FunctionTemplate>(createNetworkProxyFor)).ToLocalChecked());
+    Nan::Set(target, Nan::New("closeNetworkProxyInstance").ToLocalChecked(),
+        Nan::GetFunction(Nan::New<FunctionTemplate>(closeNetworkProxyInstance)).ToLocalChecked());
 }
 
 NODE_MODULE(Addon, InitAll)
@@ -217,10 +223,10 @@ NAN_METHOD(getEdgeInstances)
         id.Format("%p", instances[i].hwnd);
 
         Local<Object> obj = Nan::New<Object>();
-        Nan::Set(obj, Nan::New("id").ToLocalChecked(), Nan::New<String>(id).ToLocalChecked());
+        Nan::Set(obj, Nan::New("id").ToLocalChecked(), Nan::New<String>(id).ToLocalChecked());        
         Nan::Set(obj, Nan::New("url").ToLocalChecked(), Nan::New<String>(CStringA(instances[i].url)).ToLocalChecked());
         Nan::Set(obj, Nan::New("title").ToLocalChecked(), Nan::New<String>(CStringA(instances[i].title)).ToLocalChecked());
-        Nan::Set(obj, Nan::New("processName").ToLocalChecked(), Nan::New<String>(CStringA(instances[i].processName)).ToLocalChecked());
+        Nan::Set(obj, Nan::New("processName").ToLocalChecked(), Nan::New<String>(CStringA(instances[i].processName)).ToLocalChecked());        
 
         Nan::Set(arr, i, obj);
     }
@@ -342,6 +348,35 @@ NAN_METHOD(openEdge)
 
     HRESULT hr = Helpers::OpenUrlInMicrosoftEdge(url);
     if (SUCCEEDED(hr)) // S_FALSE is a valid return code
+    {
+        info.GetReturnValue().Set(true);
+    }
+    else
+    {
+        Log("ERROR: Failed to launch Microsoft Edge");
+    }
+}
+
+NAN_METHOD(closeEdge)
+{
+    EnsureInitialized();
+    if (info.Length() < 1 || !info[0]->IsString())
+    {
+        Nan::ThrowTypeError("Incorrect arguments - closeEdge(id: string): boolean");
+        return;
+    }
+
+    info.GetReturnValue().Set(false);
+
+    String::Utf8Value id(info[0]->ToString());
+    #pragma warning(disable: 4312) // truncation to int
+    HWND hwnd = (HWND)::strtol((const char*)(*id), NULL, 16);
+    #pragma warning(default: 4312)
+
+
+    HRESULT hr = Helpers::CloseWindow(hwnd);
+    
+    if (hr == S_OK) // S_FALSE is a valid return code
     {
         info.GetReturnValue().Set(true);
     }
@@ -516,7 +551,7 @@ NAN_METHOD(connectTo)
             EXIT_IF_NOT_S_OK(hr);
         }
         else
-        {
+        {            
             // Success, return the new hwnd as an id to this instance
             HWND instanceHwnd;
             hr = spSite->GetWindow(&instanceHwnd);
@@ -579,4 +614,112 @@ NAN_METHOD(forwardTo)
     String::Utf8Value message(info[1]->ToString());
     CStringA givenMessage((const char*)(*message));
     SendMessageToInstance(instanceHwnd, givenMessage);
+}
+
+//TODO: move this helper method to the Common library
+BOOL EnumThreadWindowsHelper(_In_ DWORD threadId, _In_ const function<BOOL(HWND)>& callbackFunc)
+{
+    return ::EnumThreadWindows(threadId, [](HWND hwnd, LPARAM lparam) -> BOOL {
+        return (*(function<BOOL(HWND)>*)lparam)(hwnd);
+    }, (LPARAM)&callbackFunc);
+}
+
+NAN_METHOD(createNetworkProxyFor)
+{
+    EnsureInitialized();
+    if (info.Length() < 1 || !info[0]->IsString())
+    {
+        Nan::ThrowTypeError("Incorrect arguments - createNetworkProxyFor(id: string): string");
+        return;
+    }
+    
+    String::Utf8Value id(info[0]->ToString());
+#pragma warning(disable: 4312) // truncation to int
+    HWND hwnd = (HWND)::strtol((const char*)(*id), NULL, 16);
+#pragma warning(default: 4312)
+
+    info.GetReturnValue().Set(Nan::Null());
+
+    // compose the path to the NetworkProxy app
+    TCHAR localPath[MAX_PATH];
+    GetCurrentDirectory(MAX_PATH, localPath);
+    CString networkProxyPath;
+    networkProxyPath.Format(L"%s\\out\\lib\\NetworkProxy.exe", localPath);
+
+    LPDWORD processId;
+    GetWindowThreadProcessId(hwnd, processId);    
+
+    CString arguments;    
+    arguments.Format(L"--process-id=%d", *processId);
+
+    // Launch the process
+    STARTUPINFO si = { 0 };
+    PROCESS_INFORMATION pi = { 0 };
+    si.cb = sizeof(si);
+    si.wShowWindow = SW_MINIMIZE;
+
+    BOOL result = ::CreateProcess(
+        networkProxyPath,
+        arguments.GetBuffer(),
+        nullptr,
+        nullptr,
+        FALSE,
+        0,
+        nullptr,
+        nullptr,
+        &si,
+        &pi);
+    arguments.ReleaseBuffer();
+
+    // give time to the process to start the windows
+    Sleep(1000);
+
+    if (result)
+    {
+        DWORD networkProcessId = pi.dwProcessId;
+        HWND proxyHwnd = nullptr;
+
+        EnumThreadWindowsHelper(pi.dwThreadId, [&](HWND hwndTop) -> BOOL
+        {
+            if (Helpers::IsWindowClass(hwndTop, L"NetworkProxyWindow"))
+            {
+                proxyHwnd = hwndTop;
+            }
+            return TRUE;
+        });
+
+        if (proxyHwnd != nullptr)
+        {
+            CStringA newId;
+            newId.Format("%p", proxyHwnd);
+            info.GetReturnValue().Set(Nan::New<String>(newId).ToLocalChecked());            
+        }
+        else
+        {
+            Log("NetworkProxy hwnd not found.");
+        }        
+    }
+    else
+    {
+        Log("Could not open NetworkProxy.");        
+    }        
+}
+
+NAN_METHOD(closeNetworkProxyInstance) 
+{
+    EnsureInitialized();
+    if (info.Length() < 1 || !info[0]->IsString())
+    {
+        Nan::ThrowTypeError("Incorrect arguments - closeNetworkProxy(Instanceid: NetworkProxyInstanceId): boolean");
+        return;
+    }
+
+    String::Utf8Value edgeInstanceId(info[0]->ToString());
+#pragma warning(disable: 4312) // truncation to int
+    HWND instanceHwnd = (HWND)::strtol((const char*)(*edgeInstanceId), NULL, 16);
+#pragma warning(default: 4312)
+
+    ::PostMessage(instanceHwnd, WM_DESTROY, 0, 0);   
+
+    info.GetReturnValue().Set(true);
 }

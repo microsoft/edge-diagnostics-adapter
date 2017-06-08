@@ -167,7 +167,15 @@ module EdgeDiagnosticsAdapter {
                         }
                     };
                     break;
-
+                case "querySelector":
+                    processedResult = this.querySelector(request);
+                    break;
+                case "querySelectorAll":
+                    processedResult = this.querySelectorAll(request);
+                    break;
+                case "getOuterHTML":
+                    processedResult = this.getOuterHTML(request);
+                    break;
                 default:
                     processedResult = {};
                     processedResult.result = {};
@@ -239,6 +247,39 @@ module EdgeDiagnosticsAdapter {
             }
 
             return this._mapUidToNode.get(nodeUID);
+        }
+
+        private querySelector(request: IWebKitRequest) : IWebKitResult {
+            var processedResult: IWebKitResult = {};
+            var nodeId: number = request.params.nodeId;
+            var selector: string = request.params.selector;
+            var node = <Element>this.getNode(nodeId);
+            var selectedNode = node.querySelector(selector);
+            processedResult.result = {nodeId: this.getNodeUid(selectedNode)};
+            return processedResult;
+        }
+
+        private querySelectorAll(request: IWebKitRequest) : IWebKitResult {
+            var processedResult: IWebKitResult = {};
+            var nodeId: number = request.params.nodeId;
+            var selector: string = request.params.selector;
+            var node = <Element>this.getNode(nodeId);
+            var selectedNodes = node.querySelectorAll(selector);
+            var ids : number[] = [];
+            for (var idx = 0; idx <selectedNodes.length; idx++) {
+                ids.push(this.getNodeUid(selectedNodes[idx]));
+            }
+            processedResult.result = {nodeIds: ids};
+            return processedResult;
+        }        
+
+        private getOuterHTML(request: IWebKitRequest) : IWebKitResult {
+            var processedResult: IWebKitResult = {};
+            var nodeId: number = request.params.nodeId;
+            var node = this.getNode(nodeId) as HTMLElement;
+            var html = node.outerHTML;
+            processedResult.result = {outerHTML: html};
+            return processedResult;
         }
 
         private pushNodesByBackendIdsToFrontend(request: IWebKitRequest): IWebKitResult {

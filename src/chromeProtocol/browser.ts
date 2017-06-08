@@ -172,7 +172,7 @@ module EdgeDiagnosticsAdapter {
 
                         case "BrowserTool":
                             browserToolHandler.processMessage(methodParts[1], request);
-                            break;
+                            break;                            
 
                         case "Debugger":
                             switch (methodParts[1]) {
@@ -209,6 +209,10 @@ module EdgeDiagnosticsAdapter {
                                     browserHandler.postResponse(request.id, processedResult);
                                     break;
                             }
+                            break;
+
+                        case "Network":
+                            networkHandler.processMessage(methodParts[1], request);                            
                             break;
 
                         default:

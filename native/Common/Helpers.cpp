@@ -1,4 +1,4 @@
-//
+﻿//
 // Copyright (C) Microsoft. All rights reserved.
 //
 
@@ -463,8 +463,16 @@ namespace Helpers
             }
             hRes = Process32Next(hSnapShot, &pEntry);
         }
-        CloseHandle(hSnapShot);
+        CloseHandle(hSnapShot); 
 
+        return S_OK;
+    }
+
+    HRESULT CloseWindow(_In_ const HWND hwnd)
+    {        
+        HWND parentWindow = GetParent(hwnd);
+        ::PostMessage(parentWindow, WM_CLOSE, 0, 0);
+        
         return S_OK;
     }
 

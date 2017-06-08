@@ -1,4 +1,4 @@
-//
+﻿//
 // Copyright (C) Microsoft. All rights reserved.
 //
 
@@ -42,9 +42,11 @@ export module EdgeAdapter {
         private _serverPort: number;
         private _chromeToolsPort: number;
         private _guidToIdMap: Map<string, string> = new Map<string, string>();
-        private _idToEdgeMap: Map<string, edgeAdapter.EdgeInstanceId> = new Map<string, edgeAdapter.EdgeInstanceId>();
+        private _idToEdgeMap: Map<string, edgeAdapter.EdgeInstanceId> = new Map<string, edgeAdapter.EdgeInstanceId>();        
+        private _idToNetWorkProxyMap: Map<string, edgeAdapter.NetworkProxyInstanceId> = new Map<string,edgeAdapter.NetworkProxyInstanceId>();
         private _edgeToWSMap: Map<edgeAdapter.EdgeInstanceId, ws[]> = new Map<edgeAdapter.EdgeInstanceId, ws[]>();
         private _diagLogging: boolean = false;
+        private _networkProxyMessage: Array<string> = new Array<string> ('Network.enable', 'Network.disable');
 
         constructor (diagLogging: boolean) {
             this._diagLogging = diagLogging;
@@ -70,14 +72,19 @@ export module EdgeAdapter {
             this._webSocketServer.on('connection', (client) => this.onWSSConnection(client));
 
             this._httpServer.listen(serverPort, "0.0.0.0");
-        }
+        }        
 
         private onServerRequest(request: http.IncomingMessage, response: http.ServerResponse): void {
             // Normalize request url
             let url = request.url.trim().toLocaleLowerCase();
+            // Extract parameter list
+            // TODO: improve the parameter extraction            
+            let urlParts = this.extractParametersFromUrl(url);
+            url = urlParts.url;
+            let param = urlParts.paramChain;    
             if (url.lastIndexOf('/') == url.length - 1) {
                 url = url.substr(0, url.length - 1);
-            }
+            }                  
 
             const host = request.headers.host || "localhost";
 
@@ -111,13 +118,26 @@ export module EdgeAdapter {
                     response.end();
                     break;
 
+                case '/json/new':
+                    // create a new tab 
+                    if(!param) param = "";                  
+                    edgeAdapter.openEdge(param);
+                    break;
+
+                case '/json/close':
+                    // close a tab                      
+                    response.writeHead(200, { "Content-Type": "text/html" });
+                    this.closeEdgeInstance(param);
+                    response.end();                    
+                    break;
+
                 default:
                     // Not found
                     response.writeHead(404, { "Content-Type": "text/html" });
                     response.end();
                     break;
             }
-        }
+        }        
 
         private onWSSConnection(ws: ws): void {
             // Normalize request url
@@ -134,17 +154,18 @@ export module EdgeAdapter {
 
             let succeeded = false;
             let instanceId: edgeAdapter.EdgeInstanceId = null;
+            let networkInstanceId: edgeAdapter.NetworkProxyInstanceId = null;
 
             if (this._guidToIdMap.has(guid)) {
                 const id = this._guidToIdMap.get(guid);
-                instanceId = this._idToEdgeMap.get(id);
+                instanceId = this._idToEdgeMap.get(id);                
                 if (!instanceId) {
                     // New connection
-                    instanceId = edgeAdapter.connectTo(id);
+                    instanceId = edgeAdapter.connectTo(id);                                                           
                     if (instanceId) {
                         this.injectAdapterFiles(instanceId);
                         this._idToEdgeMap.set(id, instanceId);
-                        this._edgeToWSMap.set(instanceId, [ws]);
+                        this._edgeToWSMap.set(instanceId, [ws]);                                              
                         succeeded = true;
                     }
                 } else {
@@ -154,15 +175,25 @@ export module EdgeAdapter {
                     this._edgeToWSMap.set(instanceId, sockets);
                     succeeded = true;
                 }
+                networkInstanceId = this._idToNetWorkProxyMap.get(id);
+                if(!networkInstanceId){                    
+                    networkInstanceId = edgeAdapter.createNetworkProxyFor(id);
+                    if(networkInstanceId){
+                        this._idToNetWorkProxyMap.set(id, networkInstanceId);
+                    }
+                }
             }
 
-            if (succeeded) {
+            if (succeeded && networkInstanceId) {
                 // Forward messages to the proxy
                 ws.on('message', (msg) => {
                     if (this._diagLogging) {
                         console.log("Client:", instanceId, msg);
-                    }
-                    edgeAdapter.forwardTo(instanceId, msg);
+                    }   
+                    if(this.isMessageForNetworkProxy(msg)){        
+                        edgeAdapter.forwardTo(networkInstanceId, msg);
+                    }                                     
+                    edgeAdapter.forwardTo(instanceId, msg);                    
                 });
 
                 const removeSocket = (instanceId: edgeAdapter.EdgeInstanceId) => {
@@ -185,10 +216,23 @@ export module EdgeAdapter {
                 // No matching Edge instance
                 ws.close();
             }
-        }
+        }        
 
         private log(message: string): void {
             this.onLogMessage(message);
+        }
+
+        private isMessageForNetworkProxy(message: any): boolean{
+            var jsonObject:any;
+            try {
+                 jsonObject = JSON.parse(message);                
+            } catch (SyntaxError) {
+                console.log("Error parsing message: ", message);
+                return false;
+            }
+            let method = jsonObject['method'] as string;
+            
+            return this._networkProxyMessage.indexOf(method) != -1;
         }
 
         private onEdgeMessage(instanceId: edgeAdapter.EdgeInstanceId, msg: string): void {
@@ -209,17 +253,18 @@ export module EdgeAdapter {
 
         private injectAdapterFiles(instanceId: edgeAdapter.EdgeInstanceId): void {
             const files: { engine: edgeAdapter.EngineType, filename: string }[] = [
-                { engine: "browser", filename: "Assert.js" },
-                { engine: "browser", filename: "Common.js" },
-                { engine: "browser", filename: "Browser.js" },
-                { engine: "browser", filename: "DOM.js" },
-                { engine: "browser", filename: "Runtime.js" },
-                { engine: "browser", filename: "Page.js" },
-                { engine: "browser", filename: "CSSParser.js" },
-                { engine: "browser", filename: "BrowserTool.js" },
-                { engine: "debugger", filename: "Assert.js" },
-                { engine: "debugger", filename: "Common.js" },
-                { engine: "debugger", filename: "Debugger.js" },
+                { engine: "browser", filename: "assert.js" },
+                { engine: "browser", filename: "common.js" },
+                { engine: "browser", filename: "browser.js" },
+                { engine: "browser", filename: "dom.js" },
+                { engine: "browser", filename: "runtime.js" },
+                { engine: "browser", filename: "page.js" },
+                { engine: "browser", filename: "CssParser.js" },
+                { engine: "browser", filename: "browserTool.js" },
+                { engine: "browser", filename: "network.js" },
+                { engine: "debugger", filename: "assert.js" },
+                { engine: "debugger", filename: "common.js" },
+                { engine: "debugger", filename: "debugger.js" },                
             ];
 
             for (let i = 0; i < files.length; i++) {
@@ -290,7 +335,55 @@ export module EdgeAdapter {
 
         private createGuid(): string {
             const g: string = crypto.createHash('md5').update(Math.random().toString()).digest('hex').toUpperCase();
-            return `${g.substring(0, 8)}-${g.substring(9, 13)}-${g.substring(13, 17)}-${g.substring(17, 21)}-${g.substring(21, 31)}`
+            return `${g.substring(0, 8)}-${g.substring(9, 13)}-${g.substring(13, 17)}-${g.substring(17, 21)}-${g.substring(21, 31)}`            
+        }
+
+        private extractParametersFromUrl(url: string): {url:string, paramChain: string}{
+            let parameters;
+            const closeUrl = '/json/close';
+
+            if(url.indexOf('/json/new') != -1){
+                const urlSegements = url.split('?');                
+                if(urlSegements.length > 1){
+                    url = urlSegements[0];
+                    parameters = urlSegements[1];
+                }
+            } else if(url.indexOf(closeUrl) != -1){
+                parameters = url.replace(`${closeUrl}/`,'');
+                url = url.slice(0,closeUrl.length);
+                }
+
+            return {url: url, paramChain: parameters};
+        }
+
+        private closeEdgeInstance(guid: string): boolean{
+            var result = false;
+
+            const id = this._guidToIdMap.get(guid.toLocaleUpperCase());            
+            if(id){                
+                result = edgeAdapter.closeEdge(id);
+                if(result){
+                    const networkInstanceId = this._idToNetWorkProxyMap.get(id);
+                    if(networkInstanceId){
+                        edgeAdapter.closeNetworkProxyInstance(networkInstanceId);
+                    }
+                    // tab is closed, clean all the mappings and close connections                    
+                    let instanceId = this._idToEdgeMap.get(id);
+                    const sockets = this._edgeToWSMap.get(instanceId)
+                    if(sockets){
+                        for (let i = 0; i < sockets.length; i++) {
+                            sockets[i].removeAllListeners();
+                            sockets[i].close();
+                        }
+                    }
+                    this._edgeToWSMap.delete(instanceId);
+                    this._guidToIdMap.delete(guid.toLocaleUpperCase());
+                    this._guidToIdMap.delete(id);                    
+                    this._idToNetWorkProxyMap.delete(id);                    
+                    this._idToEdgeMap.delete(id);                    
+                }
+            }
+            return result;
         }
     }
 }
