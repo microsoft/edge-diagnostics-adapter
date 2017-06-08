@@ -120,25 +120,15 @@ export module EdgeAdapter {
 
                 case '/json/new':
                     // create a new tab 
-                    // TODO: review why "about:blank" is not working and return result (success or failure)
-                    // if(!param) param = "about:blank";
                     if(!param) param = "";                  
                     edgeAdapter.openEdge(param);
                     break;
 
                 case '/json/close':
-                    // close a tab 
-                    // TODO: review the response type management                   
-                    if(!param){
-                        response.writeHead(400, { "Content-Type": "text/html" });
-                        response.write(JSON.stringify({ error: "Empty parameter: target id is required."}));
-                        response.end();
-                    }
-                    else{                        
-                        response.writeHead(200, { "Content-Type": "text/html" });
-                        this.closeEdgeInstance(param);
-                        response.end();
-                    }
+                    // close a tab                      
+                    response.writeHead(200, { "Content-Type": "text/html" });
+                    this.closeEdgeInstance(param);
+                    response.end();                    
                     break;
 
                 default:

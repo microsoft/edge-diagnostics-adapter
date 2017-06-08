@@ -640,10 +640,10 @@ NAN_METHOD(createNetworkProxyFor)
 
     info.GetReturnValue().Set(Nan::Null());
 
+    // compose the path to the NetworkProxy app
     TCHAR localPath[MAX_PATH];
     GetCurrentDirectory(MAX_PATH, localPath);
     CString networkProxyPath;
-    //TODO: put final relative path
     networkProxyPath.Format(L"%s\\out\\lib\\NetworkProxy.exe", localPath);
 
     LPDWORD processId;
