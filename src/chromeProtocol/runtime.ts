@@ -13,6 +13,7 @@ module EdgeDiagnosticsAdapter {
 
         public processMessage(method: string, request: IWebKitRequest): void {
             var processedResult: IWebKitResult;
+            let isAsync: boolean = false;
 
             switch (method) {
                 case "enable":
@@ -28,6 +29,17 @@ module EdgeDiagnosticsAdapter {
                         try {
                             var escapedInput = JSON.stringify(request.params.expression).slice(1, -1);
                             resultFromEval = browser.executeScript(escapedInput);
+
+                            if (request.params.awaitPromise == true) {                                                                
+                                isAsync = true;
+                                resultFromEval.then(v => {
+                                    processedResult = this.createProcessedResult(v, false);
+                                    browserHandler.postResponse(request.id, processedResult);
+                                }).catch( e => {
+                                    processedResult = this.createProcessedResult(e, true);
+                                    browserHandler.postResponse(request.id, processedResult); 
+                                });
+                            }
                         } catch (e) {
                             resultFromEval = e;
                             wasThrown = true;
@@ -52,11 +64,28 @@ module EdgeDiagnosticsAdapter {
                         }
                     }
 
-                    var id = null;
-                    var description = (resultFromEval ? resultFromEval.toString() : "");
-                    var value = resultFromEval;
+                    if (!isAsync) {
+                        processedResult = this.createProcessedResult(resultFromEval, wasThrown); 
+                    }                   
+                    break;
 
-                    if (resultFromEval && typeof resultFromEval === "object") {
+                default:
+                    processedResult = null;
+                    break;
+            }
+
+            if (!isAsync) {
+                browserHandler.postResponse(request.id, processedResult);
+            }
+        }
+
+        private createProcessedResult(resultFromEval: any, exeptionWasThrown: boolean) : IWebKitResult{
+            var id = null;
+            var description = (resultFromEval ? resultFromEval.toString() : "");
+            var value = resultFromEval
+            var processedResult: IWebKitResult;
+
+            if (resultFromEval && typeof resultFromEval === "object") {
                         id = "1";
                         description = "Object";
                         value = null;
@@ -71,21 +100,13 @@ module EdgeDiagnosticsAdapter {
 
                     processedResult = {
                         result: {
-                            wasThrown: wasThrown,
+                            wasThrown: exeptionWasThrown,
                             result: resultDesc
                         }
                     };
-
-                    break;
-
-                default:
-                    processedResult = null;
-                    break;
-            }
-
-            browserHandler.postResponse(request.id, processedResult);
+            return processedResult;
         }
-    }
+    }   
 
     export var runtimeHandler: RuntimeHandler = new RuntimeHandler();
 }
