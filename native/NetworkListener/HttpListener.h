@@ -36,6 +36,7 @@ namespace NetworkProxyLibrary
         std::function<void(const wchar_t*)> _callback;
         unsigned int _processId;
         MessageManager^ _messageManager;
+        bool _listenerStarted;
         
         // to delete, only for testing
         std::mutex fileWriteMutex;

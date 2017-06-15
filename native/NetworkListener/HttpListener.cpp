@@ -25,6 +25,7 @@ HttpListener::HttpListener(HttpDiagnosticProvider^ provider, unsigned int proces
 {
 	_provider = provider;
 	_processId = processId;
+    _listenerStarted = false;
     _messageManager = ref new MessageManager(processId);
     _messageManager->MessageProcessed += ref new NetworkProxyLibrary::MessageProcessedEventHandler(this, &HttpListener::OnMessageProcessed);
 
@@ -50,21 +51,26 @@ HttpListener::~HttpListener()
 
 void HttpListener::StartListening(std::function<void(const wchar_t*)> callback)
 {
-	_callback = callback;    
-	_provider->Start();
-	_requestSentToken = _provider->RequestSent += ref new TypedEventHandler<HttpDiagnosticProvider^, HttpDiagnosticProviderRequestSentEventArgs^>(this, &HttpListener::OnRequestSent);
-	_responseReceivedToken = _provider->ResponseReceived += ref new TypedEventHandler<HttpDiagnosticProvider^, HttpDiagnosticProviderResponseReceivedEventArgs^>(this, &HttpListener::OnResponseReceived);
-	_requestResponseCompletedToken = _provider->RequestResponseCompleted += ref new TypedEventHandler<HttpDiagnosticProvider^, HttpDiagnosticProviderRequestResponseCompletedEventArgs^>(this, &HttpListener::OnRequestResponseCompleted);
+	_callback = callback;
+    if (_listenerStarted == false)
+    {
+	    _provider->Start();        
+	    _requestSentToken = _provider->RequestSent += ref new TypedEventHandler<HttpDiagnosticProvider^, HttpDiagnosticProviderRequestSentEventArgs^>(this, &HttpListener::OnRequestSent);
+	    _responseReceivedToken = _provider->ResponseReceived += ref new TypedEventHandler<HttpDiagnosticProvider^, HttpDiagnosticProviderResponseReceivedEventArgs^>(this, &HttpListener::OnResponseReceived);
+	    _requestResponseCompletedToken = _provider->RequestResponseCompleted += ref new TypedEventHandler<HttpDiagnosticProvider^, HttpDiagnosticProviderRequestResponseCompletedEventArgs^>(this, &HttpListener::OnRequestResponseCompleted);
+        _listenerStarted = true;
+    }
 }
 
 void NetworkProxyLibrary::HttpListener::StopListening()
 {
-    if (_provider != nullptr)
+    if (_provider != nullptr && _listenerStarted == true)
     {        
         _provider->RequestSent -= _requestSentToken;
         _provider->ResponseReceived -= _responseReceivedToken;
         _provider->RequestResponseCompleted -= _requestSentToken;
         _provider->Stop();
+        _listenerStarted = false;
     }
 }
 
