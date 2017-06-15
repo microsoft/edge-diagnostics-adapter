@@ -193,8 +193,9 @@ export module EdgeAdapter {
                     }   
                     if(this.isMessageForNetworkProxy(msg)){        
                         edgeAdapter.forwardTo(networkInstanceId, msg);
+                    } else{
+                        edgeAdapter.forwardTo(instanceId, msg);                    
                     }                                     
-                    edgeAdapter.forwardTo(instanceId, msg);                    
                 });
 
                 const removeSocket = (instanceId: edgeAdapter.EdgeInstanceId) => {
