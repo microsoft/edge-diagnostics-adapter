@@ -51,8 +51,7 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
     auto valuePosition = commandLine.find(parameter.c_str());
 
     if (valuePosition == string::npos)
-    {
-        MessageBox(NULL, L"string::npos", L"info", NULL);
+    {       
         throw ref new InvalidArgumentException(L"Required argument to start the application: --process-id=%processId%");
     }
         
@@ -249,7 +248,7 @@ void SendMessageToWebSocket(_In_ const wchar_t* message)
         return;
     }
 
-    ::SendMessage(m_serverHwnd, WM_COPYDATA, reinterpret_cast<WPARAM>(m_serverHwnd), reinterpret_cast<LPARAM>(&copyData));
+    ::SendMessage(m_serverHwnd, WM_COPYDATA, reinterpret_cast<WPARAM>(m_hMainWnd), reinterpret_cast<LPARAM>(&copyData));
 }
 
 //

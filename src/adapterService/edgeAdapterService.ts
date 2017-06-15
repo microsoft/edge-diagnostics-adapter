@@ -180,6 +180,7 @@ export module EdgeAdapter {
                     networkInstanceId = edgeAdapter.createNetworkProxyFor(id);
                     if(networkInstanceId){
                         this._idToNetWorkProxyMap.set(id, networkInstanceId);
+                        this._idToNetWorkProxyMap.set(networkInstanceId, id);                        
                     }
                 }
             }
@@ -239,8 +240,19 @@ export module EdgeAdapter {
             if (this._diagLogging) {
                 console.log("EdgeService:", instanceId, msg);
             }
-            if (this._edgeToWSMap.has(instanceId)) {
-                const sockets = this._edgeToWSMap.get(instanceId)
+
+            let edgeProxyId;                            
+            if(this._idToNetWorkProxyMap.has(instanceId)){
+                // message comes from network proxy, we get he edge proxy id
+                const id = this._idToNetWorkProxyMap.get(instanceId)
+                edgeProxyId = this._idToEdgeMap.get(id);
+            }
+            else{
+                edgeProxyId = instanceId;
+            }
+
+            if (this._edgeToWSMap.has(edgeProxyId)) {
+                const sockets = this._edgeToWSMap.get(edgeProxyId)
                 for (let i = 0; i < sockets.length; i++) {
                     sockets[i].send(msg);
                 }
@@ -379,7 +391,8 @@ export module EdgeAdapter {
                     this._edgeToWSMap.delete(instanceId);
                     this._guidToIdMap.delete(guid.toLocaleUpperCase());
                     this._guidToIdMap.delete(id);                    
-                    this._idToNetWorkProxyMap.delete(id);                    
+                    this._idToNetWorkProxyMap.delete(id);
+                    this._idToNetWorkProxyMap.delete(networkInstanceId);                   
                     this._idToEdgeMap.delete(id);                    
                 }
             }
