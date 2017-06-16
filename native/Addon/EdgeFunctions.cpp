@@ -641,10 +641,9 @@ NAN_METHOD(createNetworkProxyFor)
     info.GetReturnValue().Set(Nan::Null());
 
     // compose the path to the NetworkProxy app
-    TCHAR localPath[MAX_PATH];
-    GetCurrentDirectory(MAX_PATH, localPath);
-    CString networkProxyPath;
-    networkProxyPath.Format(L"%s\\out\\lib\\NetworkProxy.exe", localPath);
+    CString path = Helpers::UTF8toUTF16(m_rootPath);
+    path.Append(L"\\..\\..\\lib\\");   
+    path.Append(L"NetworkProxy.exe");            
 
     LPDWORD processId;
     GetWindowThreadProcessId(hwnd, processId);    
@@ -659,7 +658,7 @@ NAN_METHOD(createNetworkProxyFor)
     si.wShowWindow = SW_MINIMIZE;
 
     BOOL result = ::CreateProcess(
-        networkProxyPath,
+        path,
         arguments.GetBuffer(),
         nullptr,
         nullptr,
@@ -701,7 +700,10 @@ NAN_METHOD(createNetworkProxyFor)
     }
     else
     {
-        Log("Could not open NetworkProxy.");        
+        CString msg = L"Could not open NetworkProxy at path: ";
+        msg.Append(path);
+        CStringA msgUTF8 = Helpers::UTF16toUTF8(msg);
+        Log(msgUTF8);        
     }        
 }
 
