@@ -47,17 +47,30 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
     UNREFERENCED_PARAMETER(lpCmdLine);
 
     // TODO: Place code here.
-    const wstring parameter = L"--process-id=";
+    const wstring PIdParam = L"--process-id=";        
     wstring commandLine = GetCommandLine();
-    auto valuePosition = commandLine.find(parameter.c_str());
+    auto startPIdParam = commandLine.find(PIdParam.c_str());
 
-    if (valuePosition == string::npos)
+    const wstring launchParam = L"--startlistener";
+    bool isAutoLaunchActive = commandLine.find(launchParam.c_str()) != string::npos;
+
+    if (startPIdParam == string::npos)
     {       
         throw ref new InvalidArgumentException(L"Required argument to start the application: --process-id=%processId%");
     }
         
-    wstring paramValue = commandLine.substr(valuePosition + parameter.length());
-    m_edgeProcessId = _wtol(paramValue.c_str());     
+    auto endPIdParam = commandLine.find(L"-", startPIdParam + PIdParam.length());
+    if (endPIdParam == string::npos)
+    {
+        wstring paramValue = commandLine.substr(startPIdParam + PIdParam.length());
+        m_edgeProcessId = _wtol(paramValue.c_str());
+    }
+    else
+    {
+        auto length = endPIdParam - (startPIdParam + PIdParam.length());
+        wstring paramValue = commandLine.substr(startPIdParam + PIdParam.length(), length);
+        m_edgeProcessId = _wtol(paramValue.c_str());
+    }
 
     // Initialize global strings
     LoadStringW(hInstance, IDS_APP_TITLE, szTitle, MAX_LOADSTRING);
@@ -75,6 +88,12 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
     MSG msg;
 
     ShowWindow(m_hMainWnd, SW_HIDE);
+
+    if (isAutoLaunchActive) 
+    {
+        m_networkMonitor = new NetworkMonitor(m_edgeProcessId);
+        m_networkMonitor->StartListeningEdgeProcess(&OnMessageReceived);
+    }
 
     // Main message loop:
     while (GetMessage(&msg, nullptr, 0, 0))
@@ -195,7 +214,6 @@ void OnMessageFromWebSocket(UINT nMsg, WPARAM wParam, LPARAM lParam)
         // Get the string message from the structure
         CopyDataPayload_StringMessage_Data* pMessage = reinterpret_cast<CopyDataPayload_StringMessage_Data*>(pParams->lpData);
         LPCWSTR lpString = reinterpret_cast<LPCWSTR>(reinterpret_cast<BYTE*>(pMessage) + pMessage->uMessageOffset);
-        //wstring message = wstring(lpString);
 
         String^ message = ref new String(lpString);        
         JsonObject^ jsonMessage;
