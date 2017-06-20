@@ -11,6 +11,7 @@
 
 using namespace std;
 using namespace NetworkProxyLibrary;
+using namespace Windows::Data;
 
 
 /*************************************************************/
@@ -194,20 +195,34 @@ void OnMessageFromWebSocket(UINT nMsg, WPARAM wParam, LPARAM lParam)
         // Get the string message from the structure
         CopyDataPayload_StringMessage_Data* pMessage = reinterpret_cast<CopyDataPayload_StringMessage_Data*>(pParams->lpData);
         LPCWSTR lpString = reinterpret_cast<LPCWSTR>(reinterpret_cast<BYTE*>(pMessage) + pMessage->uMessageOffset);
-        wstring message = wstring(lpString);
-        
-        if (message.find(L"\"method\":\"Network.enable\"") != string::npos) 
+        //wstring message = wstring(lpString);
+
+        String^ message = ref new String(lpString);        
+        JsonObject^ jsonMessage;
+        bool messageParsed = JsonObject::TryParse(message, &jsonMessage);
+
+        if (messageParsed)
         {
-            if (m_networkMonitor == nullptr)
+            int id = (int)jsonMessage->GetNamedNumber("id", 0);            
+            auto method = jsonMessage->GetNamedString("method");
+                    
+            if (method == "Network.enable")
             {
-                m_networkMonitor = new NetworkMonitor(m_edgeProcessId);
+                if (m_networkMonitor == nullptr)
+                {
+                    m_networkMonitor = new NetworkMonitor(m_edgeProcessId);
+                }
+                m_networkMonitor->StartListeningEdgeProcess(&OnMessageReceived);                
             }
-            m_networkMonitor->StartListeningEdgeProcess(&OnMessageReceived);
+            else if (method == "Network.disable")
+            {
+                m_networkMonitor->StopListeningEdgeProcess();
+            }
+            JsonObject^ response = ref new JsonObject();
+            response->Insert("id", JsonValue::CreateNumberValue(id));
+            response->Insert("result", ref new JsonObject());
+            SendMessageToWebSocket(response->ToString()->Data());
         }
-        else if (message.find(L"\"method\":\"Network.disable\"") != string::npos)
-        {
-            m_networkMonitor->StopListeningEdgeProcess();
-        }      
     }
 }
 
