@@ -2,7 +2,10 @@
   "name": "edge-diagnostics-adapter",
   "version": "0.4.0",
   "description": "Microsoft Edge Diagnostics Adapter",
-  "files": [],
+  "files": [
+    "out\\lib",
+    "out\\src"
+  ],
   "keywords": [
     "edge",
     "diagnostics",
