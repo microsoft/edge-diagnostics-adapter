@@ -470,6 +470,11 @@ namespace Helpers
 
     HRESULT CloseWindow(_In_ const HWND hwnd)
     {        
+        if (!IsWindow(hwnd)) 
+        {
+            return E_INVALIDARG;
+        }
+
         HWND parentWindow = GetParent(hwnd);
         ::PostMessage(parentWindow, WM_CLOSE, 0, 0);
         
@@ -514,4 +519,11 @@ namespace Helpers
 
 		return S_OK;
 	}
+
+    BOOL EnumThreadWindowsHelper(_In_ DWORD threadId, _In_ const function<BOOL(HWND)>& callbackFunc)
+    {
+        return ::EnumThreadWindows(threadId, [](HWND hwnd, LPARAM lparam) -> BOOL {
+            return (*(function<BOOL(HWND)>*)lparam)(hwnd);
+        }, (LPARAM)&callbackFunc);
+    }
 }

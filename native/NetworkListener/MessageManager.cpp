@@ -19,13 +19,25 @@ using namespace Windows::Web::Http;
 using namespace Platform;
 using namespace NetworkProxyLibrary;
 
-MessageManager::MessageManager(unsigned int processId)
+static const pair<wstring, String^> resourceTypes[8]
 {
-    _processId = processId;
-    _currentMessageCounter = 1;    
-    _requestSentDictionary = ref new Map<Guid, JsonObject^>();
-    _retryQueue = ref new Vector<Message^>();
-}
+    // non-mapped resource types are TextTrack, XHR, Fetch, EventSource, WebSocket
+    { L"javascript", "Script" },
+    { L"css","Stylesheet" },
+    { L"image","Image" },
+    { L"audio","Media" },
+    { L"video","Media" },
+    { L"font","Font" },
+    { L"html","Document" },
+    { L"manifest","Manifest" },
+};
+
+MessageManager::MessageManager(unsigned int processId)
+    :_processId{ processId }
+    , _currentMessageCounter(1)
+    , _requestSentDictionary{ ref new Map<Guid, JsonObject^>() }
+    , _retryQueue{ ref new Vector<Message^>() }
+{ }
 
 MessageManager::~MessageManager()
 {
@@ -51,18 +63,11 @@ void InsertNumber(JsonObject^ json, String^ key, double  value)
     json->Insert(key, JsonValue::CreateNumberValue(value));
 }
 
-void MessageManager::SendToProcess(Message^ message) 
+void MessageManager::SendToProcess(Message^ message)
 {
-    try
-    {
-        OutputDebugStringW(L"Enter SendToProcess \n");                                     
-        this->ProcessMessage(message);                                          
-        OutputDebugStringW(L"Exit SendToProcess \n");
-    }
-    catch (const std::exception& ex)
-    {
-        auto t = ex;
-    }
+    OutputDebugStringW(L"Enter SendToProcess \n");
+    this->ProcessMessage(message);
+    OutputDebugStringW(L"Exit SendToProcess \n");
 }
 
 void MessageManager::PostProcessMessage(JsonObject^ jsonObject)
@@ -174,7 +179,7 @@ void MessageManager::ProcessResponseReceivedMessage(Message^ message)
 
 void MessageManager::AddMessageToQueueForRetry(Message^ message)
 {    
-    if (message->ProcessingRetries == 0)
+    if (message->ProcessingRetries < MessageManager::MessageProcessingRetries)
     {
         message->ProcessingRetries++;
         _retryMutex.lock();
@@ -183,7 +188,7 @@ void MessageManager::AddMessageToQueueForRetry(Message^ message)
     }
     else
     {
-        auto infoMessage = std::wstring(L"WARNING: Message not processed ") + message->MessageId.ToString()->Data() + std::wstring(L"\n");
+        auto infoMessage = std::wstring(L"WARNING: Message not processed after ") + std::to_wstring(message->ProcessingRetries) + std::wstring(L" retries.") + message->MessageId.ToString()->Data() + std::wstring(L"\n");
         OutputDebugStringW(infoMessage.c_str());
     }
 }
@@ -239,20 +244,7 @@ wstring ToLower(wstring text)
 }
 
 String^ ParseResourceTypeFromContentType(String^ contentType) 
-{    
-    pair<wstring, String^> resourceTypes[8]
-    { 
-        // non-mapped resource types are TextTrack, XHR, Fetch, EventSource, WebSocket
-        {L"javascript", "Script"},
-        { L"css","Stylesheet" },
-        { L"image","Image" },
-        { L"audio","Media" },
-        { L"video","Media" },
-        { L"font","Font" },
-        { L"html","Document" },
-        { L"manifest","Manifest" },
-    };
-     
+{             
     wstring contentTypeLC = ToLower(contentType->Data());
 
     for (int i = 0; i < 8; i++)

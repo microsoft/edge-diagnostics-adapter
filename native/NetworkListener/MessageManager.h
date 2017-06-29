@@ -93,7 +93,9 @@ namespace NetworkProxyLibrary
         event MessageProcessedEventHandler^ MessageProcessed;
         
 
-    private:        
+    private: 
+        static const int MessageProcessingRetries = 1;
+
         ~MessageManager();
         unsigned int _processId;
         int _currentMessageCounter;     

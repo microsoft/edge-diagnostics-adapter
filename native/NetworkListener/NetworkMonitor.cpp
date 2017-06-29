@@ -50,7 +50,7 @@ int NetworkProxyLibrary::NetworkMonitor::StartListeningEdgeProcess(std::function
 
     if (edgeProcessInfo == nullptr)
     {
-        String^ exceptionMessage = "Not found Edge process with id: " + _processId.ToString();
+        String^ exceptionMessage = "Could not find Edge process with id: " + _processId.ToString();
         throw ref new Exception(-1, exceptionMessage);
     }
 

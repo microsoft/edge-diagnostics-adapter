@@ -46,7 +46,6 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
     UNREFERENCED_PARAMETER(hPrevInstance);
     UNREFERENCED_PARAMETER(lpCmdLine);
 
-    // TODO: Place code here.
     const wstring PIdParam = L"--process-id=";        
     wstring commandLine = GetCommandLine();
     auto startPIdParam = commandLine.find(PIdParam.c_str());
@@ -60,17 +59,17 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
     }
         
     auto endPIdParam = commandLine.find(L"-", startPIdParam + PIdParam.length());
+    wstring paramValue;
     if (endPIdParam == string::npos)
     {
-        wstring paramValue = commandLine.substr(startPIdParam + PIdParam.length());
-        m_edgeProcessId = _wtol(paramValue.c_str());
+        paramValue = commandLine.substr(startPIdParam + PIdParam.length());
     }
     else
     {
         auto length = endPIdParam - (startPIdParam + PIdParam.length());
-        wstring paramValue = commandLine.substr(startPIdParam + PIdParam.length(), length);
-        m_edgeProcessId = _wtol(paramValue.c_str());
+        paramValue = commandLine.substr(startPIdParam + PIdParam.length(), length);       
     }
+    m_edgeProcessId = _wtol(paramValue.c_str());
 
     // Initialize global strings
     LoadStringW(hInstance, IDS_APP_TITLE, szTitle, MAX_LOADSTRING);
@@ -85,8 +84,6 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 
     HACCEL hAccelTable = LoadAccelerators(hInstance, MAKEINTRESOURCE(IDC_NetworkProxy));
 
-    MSG msg;
-
     ShowWindow(m_hMainWnd, SW_HIDE);
 
     if (isAutoLaunchActive) 
@@ -96,6 +93,7 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
     }
 
     // Main message loop:
+    MSG msg;
     while (GetMessage(&msg, nullptr, 0, 0))
     {
         if (!TranslateAccelerator(msg.hwnd, hAccelTable, &msg))
@@ -275,7 +273,7 @@ void SendMessageToWebSocket(_In_ const wchar_t* message)
     pData->uMessageOffset = static_cast<UINT>(ucbParamsSize);
 
     HRESULT hr = ::StringCbCopyEx(reinterpret_cast<LPWSTR>(pBuffer.get() + pData->uMessageOffset), ucbStringSize, message, NULL, NULL, STRSAFE_IGNORE_NULLS);
-    if (hr != S_OK || FAILED(hr))
+    if (hr != S_OK)
     {
         OutputDebugStringW(L"NetworkProxy::SendMessageToWebSocket-> Error copying string. \n");
         return;

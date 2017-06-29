@@ -44,5 +44,6 @@ namespace Helpers
     HRESULT KillAllProcessByExe(const wchar_t *filename);
     HRESULT GetEdgePackageFamilyName(_Out_ CString& packageFullName);
     HRESULT CloseWindow(_In_ const HWND hwnd);
+    BOOL EnumThreadWindowsHelper(_In_ DWORD threadId, _In_ const function<BOOL(HWND)>& callbackFunc);
 }
 

@@ -43,7 +43,7 @@ namespace NetworkProxyLibrary
 
     private:
         //HANDLE hFile;	
-        char* UTF16toUTF8(const wchar_t* utf16, int &outputSize);
+        string UTF16toUTF8(const wchar_t* utf16, int &outputSize);
         void CreateLogFile(const wchar_t* fileName);
         void WriteLogFile(const wchar_t* fileName, const wchar_t* message);
         void WriteLogFile(const wchar_t* fileName, unsigned char* message, unsigned int messageLength);

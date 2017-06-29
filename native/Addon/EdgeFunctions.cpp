@@ -223,10 +223,10 @@ NAN_METHOD(getEdgeInstances)
         id.Format("%p", instances[i].hwnd);
 
         Local<Object> obj = Nan::New<Object>();
-        Nan::Set(obj, Nan::New("id").ToLocalChecked(), Nan::New<String>(id).ToLocalChecked());        
+        Nan::Set(obj, Nan::New("id").ToLocalChecked(), Nan::New<String>(id).ToLocalChecked());
         Nan::Set(obj, Nan::New("url").ToLocalChecked(), Nan::New<String>(CStringA(instances[i].url)).ToLocalChecked());
         Nan::Set(obj, Nan::New("title").ToLocalChecked(), Nan::New<String>(CStringA(instances[i].title)).ToLocalChecked());
-        Nan::Set(obj, Nan::New("processName").ToLocalChecked(), Nan::New<String>(CStringA(instances[i].processName)).ToLocalChecked());        
+        Nan::Set(obj, Nan::New("processName").ToLocalChecked(), Nan::New<String>(CStringA(instances[i].processName)).ToLocalChecked());
 
         Nan::Set(arr, i, obj);
     }
@@ -362,17 +362,17 @@ NAN_METHOD(closeEdge)
     EnsureInitialized();
     if (info.Length() < 1 || !info[0]->IsString())
     {
-        Nan::ThrowTypeError("Incorrect arguments - closeEdge(id: string): boolean");
+        Nan::ThrowTypeError("Incorrect arguments - closeEdge(windowId: string): boolean");
         return;
     }
 
     info.GetReturnValue().Set(false);
 
     String::Utf8Value id(info[0]->ToString());
-    #pragma warning(disable: 4312) // truncation to int
+#pragma warning(push)
+#pragma warning(disable: 4312) // truncation to int
     HWND hwnd = (HWND)::strtol((const char*)(*id), NULL, 16);
-    #pragma warning(default: 4312)
-
+ #pragma warning(pop)
 
     HRESULT hr = Helpers::CloseWindow(hwnd);
     
@@ -382,7 +382,7 @@ NAN_METHOD(closeEdge)
     }
     else
     {
-        Log("ERROR: Failed to launch Microsoft Edge");
+        Log("ERROR: Failed to close Microsoft Edge");
     }
 }
 
@@ -504,9 +504,10 @@ NAN_METHOD(connectTo)
     }
 
     String::Utf8Value id(info[0]->ToString());
-    #pragma warning(disable: 4312) // truncation to int
+#pragma warning(push)
+#pragma warning(disable: 4312) // truncation to int
     HWND hwnd = (HWND)::strtol((const char*)(*id), NULL, 16);
-    #pragma warning(default: 4312)
+#pragma warning(pop)
 
     info.GetReturnValue().Set(Nan::Null());
 
@@ -551,7 +552,7 @@ NAN_METHOD(connectTo)
             EXIT_IF_NOT_S_OK(hr);
         }
         else
-        {            
+        {
             // Success, return the new hwnd as an id to this instance
             HWND instanceHwnd;
             hr = spSite->GetWindow(&instanceHwnd);
@@ -584,9 +585,10 @@ NAN_METHOD(injectScriptTo)
     }
 
     String::Utf8Value edgeInstanceId(info[0]->ToString());
-    #pragma warning(disable: 4312) // truncation to int
+#pragma warning(push)
+#pragma warning(disable: 4312) // truncation to int
     HWND instanceHwnd = (HWND)::strtol((const char*)(*edgeInstanceId), NULL, 16);
-    #pragma warning(default: 4312)
+#pragma warning(pop)
 
     String::Utf8Value engine(info[1]->ToString());
     String::Utf8Value filename(info[2]->ToString());
@@ -607,21 +609,14 @@ NAN_METHOD(forwardTo)
     }
 
     String::Utf8Value edgeInstanceId(info[0]->ToString());
-    #pragma warning(disable: 4312) // truncation to int
+#pragma warning(push)
+#pragma warning(disable: 4312) // truncation to int
     HWND instanceHwnd = (HWND)::strtol((const char*)(*edgeInstanceId), NULL, 16);
-    #pragma warning(default: 4312)
+#pragma warning(pop)
 
     String::Utf8Value message(info[1]->ToString());
     CStringA givenMessage((const char*)(*message));
     SendMessageToInstance(instanceHwnd, givenMessage);
-}
-
-//TODO: move this helper method to the Common library
-BOOL EnumThreadWindowsHelper(_In_ DWORD threadId, _In_ const function<BOOL(HWND)>& callbackFunc)
-{
-    return ::EnumThreadWindows(threadId, [](HWND hwnd, LPARAM lparam) -> BOOL {
-        return (*(function<BOOL(HWND)>*)lparam)(hwnd);
-    }, (LPARAM)&callbackFunc);
 }
 
 NAN_METHOD(createNetworkProxyFor)
@@ -629,16 +624,23 @@ NAN_METHOD(createNetworkProxyFor)
     EnsureInitialized();
     if (info.Length() < 1 || !info[0]->IsString())
     {
-        Nan::ThrowTypeError("Incorrect arguments - createNetworkProxyFor(id: string): string");
+        Nan::ThrowTypeError("Incorrect arguments - createNetworkProxyFor(windowId: string): string");
         return;
     }
     
     String::Utf8Value id(info[0]->ToString());
+#pragma warning(push)
 #pragma warning(disable: 4312) // truncation to int
     HWND hwnd = (HWND)::strtol((const char*)(*id), NULL, 16);
-#pragma warning(default: 4312)
+#pragma warning(pop)
 
     info.GetReturnValue().Set(Nan::Null());
+
+    if (!IsWindow(hwnd)) 
+    {
+        Log("Argument windowId is not the identifier of a window");
+        return;
+    }
 
     // compose the path to the NetworkProxy app
     CString path = Helpers::UTF8toUTF16(m_rootPath);
@@ -678,7 +680,7 @@ NAN_METHOD(createNetworkProxyFor)
         DWORD networkProcessId = pi.dwProcessId;
         HWND proxyHwnd = nullptr;
 
-        EnumThreadWindowsHelper(pi.dwThreadId, [&](HWND hwndTop) -> BOOL
+        Helpers::EnumThreadWindowsHelper(pi.dwThreadId, [&](HWND hwndTop) -> BOOL
         {
             if (Helpers::IsWindowClass(hwndTop, L"NetworkProxyWindow"))
             {
@@ -717,9 +719,16 @@ NAN_METHOD(closeNetworkProxyInstance)
     }
 
     String::Utf8Value edgeInstanceId(info[0]->ToString());
+#pragma warning(push)
 #pragma warning(disable: 4312) // truncation to int
     HWND instanceHwnd = (HWND)::strtol((const char*)(*edgeInstanceId), NULL, 16);
-#pragma warning(default: 4312)
+#pragma warning(pop)
+
+    if(!IsWindow(instanceHwnd))
+    {
+        Log("Argument Instanceid is not the identifier of a window");
+        return;
+    }
 
     ::PostMessage(instanceHwnd, WM_DESTROY, 0, 0);   
 
