@@ -30,7 +30,7 @@ module EdgeDiagnosticsAdapter {
                             var escapedInput = JSON.stringify(request.params.expression).slice(1, -1);
                             resultFromEval = browser.executeScript(escapedInput);
 
-                            if (request.params.awaitPromise == true) {                                                                
+                            if (request.params.awaitPromise == true) {
                                 isAsync = true;
                                 resultFromEval.then(v => {
                                     processedResult = this.createProcessedResult(v, false);
@@ -82,7 +82,7 @@ module EdgeDiagnosticsAdapter {
         private createProcessedResult(resultFromEval: any, exeptionWasThrown: boolean) : IWebKitResult{
             var id = null;
             var description = (resultFromEval ? resultFromEval.toString() : "");
-            var value = resultFromEval
+            var value = resultFromEval;
             var processedResult: IWebKitResult;
 
             if (resultFromEval && typeof resultFromEval === "object") {

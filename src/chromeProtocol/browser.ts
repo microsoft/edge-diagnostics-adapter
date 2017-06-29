@@ -172,7 +172,7 @@ module EdgeDiagnosticsAdapter {
 
                         case "BrowserTool":
                             browserToolHandler.processMessage(methodParts[1], request);
-                            break;                            
+                            break;
 
                         case "Debugger":
                             switch (methodParts[1]) {
