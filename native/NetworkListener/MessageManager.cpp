@@ -37,6 +37,7 @@ MessageManager::MessageManager(unsigned int processId)
     , _currentMessageCounter(1)
     , _requestSentDictionary{ ref new Map<Guid, JsonObject^>() }
     , _retryQueue{ ref new Vector<Message^>() }
+    , _responsePayloadQueue{ ref new PayloadQueue(MaxResponsePayloadsStored) }
 { }
 
 MessageManager::~MessageManager()
@@ -71,32 +72,32 @@ void MessageManager::SendToProcess(Message^ message)
 }
 
 void MessageManager::PostProcessMessage(JsonObject^ jsonObject)
-{     
-    OutputDebugStringW(L"Enter PostProcessMessage \n");        
+{
+    OutputDebugStringW(L"Enter PostProcessMessage \n");
 
-    MessageProcessed(this, jsonObject);    
+    MessageProcessed(this, jsonObject);
 
     OutputDebugStringW(L"Exit PostProcessMessage \n");
 }
 
 void MessageManager::ProcessMessage(Message^ message)
 {
-    OutputDebugStringW(L"Enter ProcessNextMessage \n");           
+    OutputDebugStringW(L"Enter ProcessNextMessage \n");
 
     switch (message->MessageType)
     {
-        case MessageTypes::RequestSent:                
-            ProcessRequestSentMessage(message);
-            break;
-        case MessageTypes::ResponseReceived:
-            ProcessResponseReceivedMessage(message);            
-            break;
-        case MessageTypes::RequestResponseCompleted:            
-        default:
-            break;
-    }        
+    case MessageTypes::RequestSent:
+        ProcessRequestSentMessage(message);
+        break;
+    case MessageTypes::ResponseReceived:
+        ProcessResponseReceivedMessage(message);
+        break;
+    case MessageTypes::RequestResponseCompleted:
+    default:
+        break;
+    }
 
-    OutputDebugStringW(L"Exit ProcessNextMessage \n");   
+    OutputDebugStringW(L"Exit ProcessNextMessage \n");
 }
 
 // Edge RequestSent message is mapped to Chrome: 
@@ -115,8 +116,8 @@ void MessageManager::ProcessRequestSentMessage(Message ^ message)
             auto payloadLenght = reader->UnconsumedBufferLength;
             String^ payload = payloadLenght > 0 ? reader->ReadString(payloadLenght) : nullptr;
             JsonObject^ seriealizedMessage = this->GenerateRequestWilBeSentMessage(eventArgs, payload);
-            this->PostProcessMessage(seriealizedMessage);            
-            OutputDebugStringW(L"Exit POST ProcessRequestSentMessage \n");                
+            this->PostProcessMessage(seriealizedMessage);
+            OutputDebugStringW(L"Exit POST ProcessRequestSentMessage \n");
         });
     }
     else
@@ -130,7 +131,7 @@ void MessageManager::ProcessRequestSentMessage(Message ^ message)
         {
             OutputDebugStringW(L"Exception calling GenerateRequestWilBeSentMessage \n");
         }
-        OutputDebugStringW(L"Exit ProcessRequestSentMessage \n");      
+        OutputDebugStringW(L"Exit ProcessRequestSentMessage \n");
     }
 }
 
@@ -139,25 +140,25 @@ void MessageManager::ProcessRequestSentMessage(Message ^ message)
 // - Network.dataReceived
 // - Network.loadingFinished
 void MessageManager::ProcessResponseReceivedMessage(Message^ message)
-{   
+{
     OutputDebugStringW(L"Enter ProcessResponseReceivedMessage \n");
-   
-    JsonObject^ responseReceivedMessage;    
+
+    JsonObject^ responseReceivedMessage;
     try
     {
-        responseReceivedMessage = this->GenerateResponseReceivedMessage(message->ResponseReceivedEventArgs);        
+        responseReceivedMessage = this->GenerateResponseReceivedMessage(message->ResponseReceivedEventArgs);
     }
     catch (const std::exception& x)
-    {        
+    {
         OutputDebugStringW(L"Exception calling GenerateResponseReceivedMessage \n");
     }
-        
+
     if (responseReceivedMessage == nullptr)
     {
-        AddMessageToQueueForRetry(message);        
+        AddMessageToQueueForRetry(message);
     }
     else
-    {        
+    {
         this->PostProcessMessage(responseReceivedMessage);
         // forced to do a task to calculate the content lenght of the message because the synchronous method data->Message->Content->TryComputeLength(&contentLenght)
         // is not returning anything
@@ -165,20 +166,23 @@ void MessageManager::ProcessResponseReceivedMessage(Message^ message)
         {
             auto reader = ::Windows::Storage::Streams::DataReader::FromBuffer(content);
             auto payloadLenght = reader->UnconsumedBufferLength;
+            String^ payload = payloadLenght > 0 ? reader->ReadString(payloadLenght) : nullptr;
+            String^ messageId = responseReceivedMessage->GetNamedObject("params")->GetNamedString("requestId");
+            _responsePayloadQueue->Add(ref new PayloadContainer(messageId, payload));
             auto dataReceivedMessage = GenerateDataReceivedMessage(responseReceivedMessage, payloadLenght);
             this->PostProcessMessage(dataReceivedMessage);
             auto loadingFinishedMessage = GenerateLoadingFinishedMessage(dataReceivedMessage);
             this->PostProcessMessage(loadingFinishedMessage);
-            
-        }); 
+
+        });
         // request message has been used for all the possible response messages --> can be deleted from the dictionary
         DeleteRequestMessage(message->ResponseReceivedEventArgs->ActivityId);
-    }          
-    OutputDebugStringW(L"Exit ProcessResponseReceivedMessage \n");        
+    }
+    OutputDebugStringW(L"Exit ProcessResponseReceivedMessage \n");
 }
 
 void MessageManager::AddMessageToQueueForRetry(Message^ message)
-{    
+{
     if (message->ProcessingRetries < MessageManager::MessageProcessingRetries)
     {
         message->ProcessingRetries++;
@@ -193,7 +197,7 @@ void MessageManager::AddMessageToQueueForRetry(Message^ message)
     }
 }
 
-void AppendHeaders(JsonObject^ headersJson, IIterator<IKeyValuePair<String^, String^>^>^ iterator) 
+void AppendHeaders(JsonObject^ headersJson, IIterator<IKeyValuePair<String^, String^>^>^ iterator)
 {
     while (iterator->HasCurrent)
     {
@@ -205,12 +209,12 @@ void AppendHeaders(JsonObject^ headersJson, IIterator<IKeyValuePair<String^, Str
 
 JsonObject^ SerializeHeaders(IIterator<IKeyValuePair<String^, String^>^>^ iterator)
 {
-    JsonObject^ result = ref new JsonObject();    
+    JsonObject^ result = ref new JsonObject();
     AppendHeaders(result, iterator);
     return result;
 }
 
-String^ ParseInitiator(wstring initiator) 
+String^ ParseInitiator(wstring initiator)
 {
     vector<wstring> scriptList{ L"CrossOriginPreFlight", L"Fetch", L"Prefetch", L"XmlHttpRequest" };
     vector<wstring> parserList{ L"HtmlDownload", L"Image", L"Link", L"Media", L"ParsedElement" };
@@ -228,28 +232,28 @@ String^ ParseInitiator(wstring initiator)
     }
 }
 
-bool StringContainsSubstring(wstring p_string, wstring p_substring) 
-{    
+bool StringContainsSubstring(wstring p_string, wstring p_substring)
+{
     auto it = std::search(
         p_string.begin(), p_string.end(),
         p_substring.begin(), p_substring.end());
-    return (it != p_string.end());    
+    return (it != p_string.end());
 }
 
-wstring ToLower(wstring text) 
+wstring ToLower(wstring text)
 {
     wstring result = text;
     transform(result.begin(), result.end(), result.begin(), ::towlower);
     return result;
 }
 
-String^ ParseResourceTypeFromContentType(String^ contentType) 
-{             
+String^ ParseResourceTypeFromContentType(String^ contentType)
+{
     wstring contentTypeLC = ToLower(contentType->Data());
 
     for (int i = 0; i < 8; i++)
-    {        
-        if (StringContainsSubstring(contentTypeLC, resourceTypes[i].first)) 
+    {
+        if (StringContainsSubstring(contentTypeLC, resourceTypes[i].first))
         {
             return resourceTypes[i].second;
         }
@@ -261,10 +265,10 @@ String^ ParseResourceTypeFromContentType(String^ contentType)
 JsonObject ^ MessageManager::GenerateRequestWilBeSentMessage(HttpDiagnosticProviderRequestSentEventArgs ^data, String^ postPayload)
 {
     HttpRequestMessage^ message = data->Message;
-    JsonObject^ result = ref new JsonObject();    
+    JsonObject^ result = ref new JsonObject();
     InsertString(result, "method", "Network.requestWillBeSent");
 
-    JsonObject^ params = ref new JsonObject();    
+    JsonObject^ params = ref new JsonObject();
     InsertString(params, "requestId", GetNextSequenceId(IdTypes::RequestId));
     InsertString(params, "frameId", GetNextSequenceId(IdTypes::FrameId));
     InsertString(params, "loaderId", GetNextSequenceId(IdTypes::LoaderId));
@@ -273,7 +277,7 @@ JsonObject ^ MessageManager::GenerateRequestWilBeSentMessage(HttpDiagnosticProvi
     JsonObject^ request = ref new JsonObject();
     InsertString(request, "url", message->RequestUri->AbsoluteUri);
 
-    InsertString(request, "method", message->Method->Method);    
+    InsertString(request, "method", message->Method->Method);
     request->Insert("headers", SerializeHeaders(message->Headers->First()));
     if (postPayload != nullptr && message->Method->Method == "POST")
     {
@@ -281,19 +285,19 @@ JsonObject ^ MessageManager::GenerateRequestWilBeSentMessage(HttpDiagnosticProvi
     }
     InsertString(request, "initialPriority", "");
 
-    params->Insert("request", request);        
-                
+    params->Insert("request", request);
+
     auto timeInSecs = data->Timestamp.UniversalTime / (10000000);
-    InsertNumber(params,"timestamp", timeInSecs);
+    InsertNumber(params, "timestamp", timeInSecs);
     InsertNumber(params, "walltime", 0);
-        
+
     JsonObject^ initiator = ref new JsonObject();
     InsertString(initiator, "type", ParseInitiator(data->Initiator.ToString()->Data()));
     params->Insert("initiator", initiator);
-    
+
     InsertString(params, "type", "Other");
 
-    result->Insert("params", params);    
+    result->Insert("params", params);
     _dictionaryMutex.lock();
     _requestSentDictionary->Insert(data->ActivityId, result);
     _dictionaryMutex.unlock();
@@ -322,48 +326,48 @@ String^ TryToGetContentTypeHeaderValue(IIterator<IKeyValuePair<String^, String^>
 }
 
 JsonObject^ MessageManager::GenerateResponseReceivedMessage(HttpDiagnosticProviderResponseReceivedEventArgs^ data)
-{   
+{
     JsonObject^ result = nullptr;
 
     JsonObject^ requestMessage = GetRequestMessage(data->ActivityId);
-    if (requestMessage != nullptr) 
+    if (requestMessage != nullptr)
     {
         result = ref new JsonObject();
         HttpResponseMessage^ message = data->Message;
-    
+
         InsertString(result, "method", "Network.responseReceived");
 
         JsonObject^ params = ref new JsonObject();
-        auto sentParams = requestMessage->GetNamedObject("params");    
+        auto sentParams = requestMessage->GetNamedObject("params");
         InsertString(params, "requestId", sentParams->GetNamedString("requestId"));
         InsertString(params, "frameId", sentParams->GetNamedString("frameId"));
         InsertString(params, "loaderId", sentParams->GetNamedString("loaderId"));
         auto timeInSecs = data->Timestamp.UniversalTime / (10000000);
-        InsertNumber(params, "timestamp", timeInSecs);        
+        InsertNumber(params, "timestamp", timeInSecs);
         String^ mimeType = TryToGetContentTypeHeaderValue(message->Content->Headers->First());
-        if (mimeType != "") 
+        if (mimeType != "")
         {
             auto resourceType = ParseResourceTypeFromContentType(mimeType);
             InsertString(params, "type", resourceType);
-        }        
+        }
 
         JsonObject^ response = ref new JsonObject();
         InsertString(response, "url", sentParams->GetNamedString("documentURL"));
-        InsertNumber(response, "status", static_cast<int>(message->StatusCode));    
+        InsertNumber(response, "status", static_cast<int>(message->StatusCode));
         InsertString(response, "statusText", message->ReasonPhrase);
 
         JsonObject^ headers = SerializeHeaders(message->Headers->First());
         AppendHeaders(headers, message->Content->Headers->First());
         response->Insert("headers", headers);
-        
-        InsertString(response, "mimeType", mimeType);      
+
+        InsertString(response, "mimeType", mimeType);
         response->Insert("requestHeaders", sentParams->GetNamedObject("request")->GetNamedObject("headers"));
         InsertString(response, "protocol", message->Version.ToString());
 
         params->Insert("response", response);
         result->Insert("params", params);
     }
-    
+
     return result;
 }
 
@@ -374,8 +378,8 @@ bool ContainsAnyEncodingHeader(JsonObject^ headers)
     while (iterator->HasCurrent)
     {
         auto header = iterator->Current;
-        wstring headerKeyLC = ToLower(header->Key->Data());        
-        
+        wstring headerKeyLC = ToLower(header->Key->Data());
+
         if (StringContainsSubstring(headerKeyLC, L"encoding"))
         {
             headerFound = true;
@@ -395,7 +399,7 @@ double TryGetContentLengthHeaderValue(JsonObject^ headers)
     while (iterator->HasCurrent)
     {
         auto header = iterator->Current;
-        wstring headerKeyLC = ToLower(header->Key->Data());        
+        wstring headerKeyLC = ToLower(header->Key->Data());
         if (headerKeyLC == L"content-length")
         {
             result = _wtol((header->Value->GetString()->Data()));
@@ -417,15 +421,15 @@ JsonObject^ MessageManager::GenerateDataReceivedMessage(JsonObject^ responseRece
     InsertNumber(params, "timestamp", responseReceivedMessage->GetNamedObject("params")->GetNamedNumber("timestamp"));
 
     InsertNumber(params, "dataLength", contentLenght);
-    
+
     auto headers = responseReceivedMessage->GetNamedObject("params")->GetNamedObject("response")->GetNamedObject("headers");
     double encodedBytes = 0;
     if (ContainsAnyEncodingHeader(headers))
     {
         // "Content-Length"
         encodedBytes = TryGetContentLengthHeaderValue(headers);
-    }    
-    InsertNumber(params, "encodedDataLength", encodedBytes);    
+    }
+    InsertNumber(params, "encodedDataLength", encodedBytes);
 
     result->Insert("params", params);
 
@@ -433,15 +437,15 @@ JsonObject^ MessageManager::GenerateDataReceivedMessage(JsonObject^ responseRece
 }
 
 JsonObject^ MessageManager::GetRequestMessage(Guid id)
-{    
+{
     JsonObject^ result = nullptr;
 
     if (_requestSentDictionary->HasKey(id))
     {
-        result = _requestSentDictionary->Lookup(id);        
-    }    
-    
-    return result;    
+        result = _requestSentDictionary->Lookup(id);
+    }
+
+    return result;
 }
 
 bool IsOutdated(long long timeStamp, long long now, int timeoutSecs)
@@ -456,7 +460,7 @@ bool IsOutdated(long long timeStamp, long long now, int timeoutSecs)
     return false;
 }
 
-void MessageManager::DeleteRequestMessage(Guid id) 
+void MessageManager::DeleteRequestMessage(Guid id)
 {
     _dictionaryMutex.lock();
     if (_requestSentDictionary->HasKey(id))
@@ -468,7 +472,7 @@ void MessageManager::DeleteRequestMessage(Guid id)
     auto calendar = ref new Windows::Globalization::Calendar();
     calendar->SetToNow();
     auto now = calendar->GetDateTime().UniversalTime;
-    Vector<Guid>^ messagesToDelete = ref new Vector<Guid>();    
+    Vector<Guid>^ messagesToDelete = ref new Vector<Guid>();
     auto iterator = _requestSentDictionary->First();
     while (iterator->HasCurrent)
     {
@@ -480,7 +484,7 @@ void MessageManager::DeleteRequestMessage(Guid id)
             messagesToDelete->Append(iterator->Current->Key);
         }
         iterator->MoveNext();
-    }    
+    }
     for each (auto id in messagesToDelete)
     {
         _requestSentDictionary->Remove(id);
@@ -491,37 +495,37 @@ void MessageManager::DeleteRequestMessage(Guid id)
 JsonObject^ MessageManager::GenerateLoadingFinishedMessage(JsonObject^ dataReceivedMessage)
 {
     JsonObject^ result = nullptr;
-    
+
     JsonObject^ dataReceivedParams = dataReceivedMessage->GetNamedObject("params");
-    
+
     result = ref new JsonObject();
     InsertString(result, "method", "Network.loadingFinished");
     JsonObject^ params = ref new JsonObject();
-    InsertString(params, "requestId", dataReceivedParams->GetNamedString("requestId"));    
+    InsertString(params, "requestId", dataReceivedParams->GetNamedString("requestId"));
     InsertNumber(params, "timestamp", dataReceivedParams->GetNamedNumber("timestamp"));
     InsertNumber(params, "encodedDataLength", dataReceivedParams->GetNamedNumber("encodedDataLength"));
     result->Insert("params", params);
-         
+
     return result;
 }
 
 void MessageManager::OnRequestInsertedToMap(Guid id)
-{   
+{
     Vector<Message^>^ messagesToProcess = ref new Vector<Message^>();
-    Vector<int>^ messagesToDelete = ref new Vector<int>();    
-   
+    Vector<int>^ messagesToDelete = ref new Vector<int>();
+
     auto calendar = ref new Windows::Globalization::Calendar();
     calendar->SetToNow();
-    auto now = calendar->GetDateTime().UniversalTime;                
+    auto now = calendar->GetDateTime().UniversalTime;
 
-    _retryMutex.lock();        
+    _retryMutex.lock();
     int i = 0;
-    while(i < _retryQueue->Size)
-    {     
+    while (i < _retryQueue->Size)
+    {
         auto message = _retryQueue->GetAt(i);
         bool isProcessed = false;
 
-        if ( _requestSentDictionary->HasKey(message->MessageId))
+        if (_requestSentDictionary->HasKey(message->MessageId))
         {
             messagesToProcess->Append(message);
             isProcessed = true;
@@ -530,13 +534,13 @@ void MessageManager::OnRequestInsertedToMap(Guid id)
         if (isProcessed || IsOutdated(message->TimeStamp, now, 10))
         {
             _retryQueue->RemoveAt(i);
-        }           
-        else 
+        }
+        else
         {
             i++;
         }
-    }        
-    _retryMutex.unlock();        
+    }
+    _retryMutex.unlock();
 
     for each (auto message in messagesToProcess)
     {
@@ -544,5 +548,5 @@ void MessageManager::OnRequestInsertedToMap(Guid id)
         {
             ProcessResponseReceivedMessage(message);
         }
-    }          
+    }
 }
