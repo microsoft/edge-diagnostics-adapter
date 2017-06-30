@@ -22,7 +22,7 @@ module EdgeDiagnosticsAdapter {
         private _elementHighlightColor: any;
         private _nextAvailableStyleSheetUid: number;
         private _sentCSS: Set<Document>;
-        private _waitingOnGetDocumentRequestId: number; 
+        private _waitingOnGetDocumentRequestId: number;
 
         // This keeps track of which nodes the Chrome Dev tools knows about. Any ID in _sentNodeIds the Chrome tools know about and know the parent chain up to the root document.
         // This is needed for the inspect element button so we can find the closet parent to the inspected element that the chrome tools know about.
@@ -30,9 +30,9 @@ module EdgeDiagnosticsAdapter {
         private _mapStyleSheetToStyleSheetID: WeakMap<CSSStyleSheet, string>;
         private _mapStyleSheetIDToStyleSheet: Map<string, CSSStyleSheet>;
 
-        // todo: Eventually we want to get rid of this and only use the actual stylesheet. However, that causes issues with disabled properties, 
+        // todo: Eventually we want to get rid of this and only use the actual stylesheet. However, that causes issues with disabled properties,
         // because there won't be any text in the style sheet and returning a property with lengh 0 is weird
-        private _mapStyleSheetIDToStyleSheetText: Map<string, string>; 
+        private _mapStyleSheetIDToStyleSheetText: Map<string, string>;
         private _inspectModeEnabled: boolean;
         private _selectElementHandler: (event: Event) => void;
         private _hoverElementHandler: (event: Event) => void;
@@ -71,7 +71,7 @@ module EdgeDiagnosticsAdapter {
             };
 
             browser.addEventListener("documentComplete", (dispatchWindow: any) => {
-                // if _waitingOnGetDocumentRequestId is not zero, it means we got a getDocument request from  the chrome dev tools before the document was finished loading. 
+                // if _waitingOnGetDocumentRequestId is not zero, it means we got a getDocument request from  the chrome dev tools before the document was finished loading.
                 // Now that we have the document we can fufill the request
                 if (this._waitingOnGetDocumentRequestId !== 0) {
                     var processedResult: IWebKitResult = this.getDocument();
@@ -92,7 +92,7 @@ module EdgeDiagnosticsAdapter {
                         return;
                     }
 
-                    processedResult = this.getDocument();
+                    processedResult = this.getDocument(request);
                     break;
 
                 case "hideHighlight":
@@ -125,7 +125,7 @@ module EdgeDiagnosticsAdapter {
 
                 case "getInlineStylesForNode":
                     if (!this._mapUidToNode.has(request.params.nodeId)) {
-                        // when we refresh the page, sometimes the chrome dev tools ask for css on a nodeID that was invalidated. 
+                        // when we refresh the page, sometimes the chrome dev tools ask for css on a nodeID that was invalidated.
                         // They also do this when the normal chrome Dev Tools are attached, so detect the problem and send back the same error chrome does.
                         // The three separate error messages for the three different CSS requests are copy-pasted from chrome
                         processedResult = { error: { code: -32000, message: "No node with given id found" } };
@@ -133,7 +133,7 @@ module EdgeDiagnosticsAdapter {
                     }
 
                     processedResult = this.getInlineStylesForNode(request);
-                   
+
                     break;
 
                 case "getMatchedStylesForNode":
@@ -249,36 +249,36 @@ module EdgeDiagnosticsAdapter {
             return this._mapUidToNode.get(nodeUID);
         }
 
-        private querySelector(request: IWebKitRequest) : IWebKitResult {
+        private querySelector(request: IWebKitRequest): IWebKitResult {
             var processedResult: IWebKitResult = {};
             var nodeId: number = request.params.nodeId;
             var selector: string = request.params.selector;
             var node = <Element>this.getNode(nodeId);
             var selectedNode = node.querySelector(selector);
-            processedResult.result = {nodeId: this.getNodeUid(selectedNode)};
+            processedResult.result = { nodeId: this.getNodeUid(selectedNode) };
             return processedResult;
         }
 
-        private querySelectorAll(request: IWebKitRequest) : IWebKitResult {
+        private querySelectorAll(request: IWebKitRequest): IWebKitResult {
             var processedResult: IWebKitResult = {};
             var nodeId: number = request.params.nodeId;
             var selector: string = request.params.selector;
             var node = <Element>this.getNode(nodeId);
             var selectedNodes = node.querySelectorAll(selector);
-            var ids : number[] = [];
-            for (var idx = 0; idx <selectedNodes.length; idx++) {
+            var ids: number[] = [];
+            for (var idx = 0; idx < selectedNodes.length; idx++) {
                 ids.push(this.getNodeUid(selectedNodes[idx]));
             }
-            processedResult.result = {nodeIds: ids};
+            processedResult.result = { nodeIds: ids };
             return processedResult;
-        }        
+        }
 
-        private getOuterHTML(request: IWebKitRequest) : IWebKitResult {
+        private getOuterHTML(request: IWebKitRequest): IWebKitResult {
             var processedResult: IWebKitResult = {};
             var nodeId: number = request.params.nodeId;
             var node = this.getNode(nodeId) as HTMLElement;
             var html = node.outerHTML;
-            processedResult.result = {outerHTML: html};
+            processedResult.result = { outerHTML: html };
             return processedResult;
         }
 
@@ -380,13 +380,13 @@ module EdgeDiagnosticsAdapter {
             var styleSheet = this._mapStyleSheetIDToStyleSheet.get(styleSheetId);
 
             // Chrome stores inline styles as a Stylesheet, We can't actualy refrence that styleSheet because it does not exist in IE
-            if (!styleSheet) { // handle the case of editing an "inline style sheet" 
+            if (!styleSheet) { // handle the case of editing an "inline style sheet"
                 var node = this.getNode(this._mapInlineStyleSheetIdToNodeId.get(styleSheetId));
                 var styleAttribute = browser.document.createAttribute("style");
                 styleAttribute.value = cssText;
                 node.attributes.setNamedItem(styleAttribute);
 
-                // send attributeModified notification 
+                // send attributeModified notification
                 var attributeModifiedParams = {
                     nodeId: this._mapInlineStyleSheetIdToNodeId.get(styleSheetId),
                     name: "style",
@@ -398,7 +398,7 @@ module EdgeDiagnosticsAdapter {
             } else { // this case is for normal styleSheets
                 // This line does not actually set styleSheet.cssText equal to our modified CSSText, instead Trident parses the new css and constructs stylesheet.CSSText from the rules/properties it detects
                 // in particular, this means if we disable a property, rather an appearing commented out, that property will dissapear from styleSheet.cssText
-                styleSheet.cssText = cssText; 
+                styleSheet.cssText = cssText;
 
                 var parsedCss = new CssParser(cssText).parseCss();
                 var modifiedRuleOffset = this.getOffsetfromLineCol(cssText, range.startLine, range.startColumn);
@@ -413,7 +413,7 @@ module EdgeDiagnosticsAdapter {
             Assert.hasValue(modifiedRule, "supplied offset is not part of a rule");
             var cssProperties = this.convertParsedCSSToJSONObject(modifiedRule.declarations, cssText);
 
-            // send cssStyleSheetChanged notification 
+            // send cssStyleSheetChanged notification
             var styleSheetChangedParams = {
                 styleSheetId: styleSheetId
             };
@@ -579,9 +579,9 @@ module EdgeDiagnosticsAdapter {
             return jsonRule;
         }
 
-        // getInheritanceChain API only returns a partial inheritence chain containing only nodes that have styles attached to them. 
+        // getInheritanceChain API only returns a partial inheritence chain containing only nodes that have styles attached to them.
         // The chrome debugger requires you return an empty "matchedCSSRules" node for elements that do not have styles attached
-        // so that it can properly determine where inherited styles came from. This builds the InheritanceChain and inserts 
+        // so that it can properly determine where inherited styles came from. This builds the InheritanceChain and inserts
         // null elements to represent an emlement with no CSS rules.
         private calculateInheritanceChain(htmlElement: HTMLElement): HTMLElement[] {
             diagnostics.styles.calculateTracedStyles(htmlElement);
@@ -666,7 +666,7 @@ module EdgeDiagnosticsAdapter {
             } else {
                 styleSheetId = this._mapNodeIdToInlineStyleSheetId.get(request.params.nodeId);
             }
-            
+
             var cssText = this.getCssText(styleSheetId);
             var parsed = new CssParser(cssText).parseInlineCss();
             var cssProperties = this.convertParsedCSSToJSONObject(parsed.declarations, cssText);
@@ -765,7 +765,7 @@ module EdgeDiagnosticsAdapter {
 
             return processedResult;
         }
-       
+
         /**
          * Converts the nodes that exist in Internet Explorer to nodes that the Chrome Dev tools understand
          */
@@ -880,8 +880,9 @@ module EdgeDiagnosticsAdapter {
             return {}; // actual response to setChildNodes is empty.
         }
 
-        private getDocument(): IWebKitResult {
+        private getDocument(request?: IWebKitRequest): IWebKitResult {
             this.styleSheetAdded(browser.document);
+            var depth = (request && request.params) ? request.params.depth : -1;
             var nodeID = this.getNodeUid(browser.document);
             var document: INode = {
                 nodeId: nodeID,
@@ -902,9 +903,13 @@ module EdgeDiagnosticsAdapter {
                 document.children = [];
             }
 
+            if (!depth || depth === -1) {
+                depth = Number.POSITIVE_INFINITY;
+            }
+
             for (var i = 0; i < browser.document.childNodes.length; i++) {
                 if (!this.isWhitespaceNode(browser.document.childNodes[i])) {
-                    document.children.push(this.createChromeNodeFromIENode(browser.document.childNodes[i], 1));
+                    document.children.push(this.createChromeNodeFromIENode(browser.document.childNodes[i], depth));
                 }
             }
 
@@ -960,7 +965,7 @@ module EdgeDiagnosticsAdapter {
                     }
                 } catch (ex) {
                     // If the rule references a file that does not exist (or cannot be accessed), sheet.rules will throw an exception
-                    // todo: add an error to our response 
+                    // todo: add an error to our response
                 }
             }
 
@@ -1042,7 +1047,7 @@ module EdgeDiagnosticsAdapter {
                 var partialChain: Element[] = [element];
                 if (Common.getDefaultView(element.ownerDocument) !== Common.getDefaultView(browser.document)) {
                     // get the chain of Iframes leading to element
-                    var iframeChain: Element[] = this.getIFrameChain(browser.document, element.ownerDocument);                    
+                    var iframeChain: Element[] = this.getIFrameChain(browser.document, element.ownerDocument);
                     if (iframeChain && iframeChain.length > 0) {
                         partialChain = partialChain.concat(iframeChain);
                     }
