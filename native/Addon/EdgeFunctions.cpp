@@ -261,7 +261,7 @@ NAN_METHOD(setSecurityACLs)
 
     // Get the SID for "ALL APPLICATION PACAKGES" since it is localized
     PSID pAllAppPackagesSID = NULL;
-    bool bResult = ConvertStringSidToSid(L"S-1-15-2-1", &pAllAppPackagesSID);
+    bool bResult = ConvertStringSidToSid(L"S-1-15-2-2", &pAllAppPackagesSID);
 
     if (bResult)
     {
