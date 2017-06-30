@@ -36,7 +36,7 @@ namespace NetworkProxyLibrary
 
     private: 
         static const int MessageProcessingRetries = 1;
-        static const int MaxResponsePayloadsStored = 500;
+        static const int MaxResponsePayloadsStored = 5;
 
         ~MessageManager();
         unsigned int _processId;

@@ -166,14 +166,29 @@ void MessageManager::ProcessResponseReceivedMessage(Message^ message)
         {
             auto reader = ::Windows::Storage::Streams::DataReader::FromBuffer(content);
             auto payloadLenght = reader->UnconsumedBufferLength;
-            String^ payload = payloadLenght > 0 ? reader->ReadString(payloadLenght) : nullptr;
-            String^ messageId = responseReceivedMessage->GetNamedObject("params")->GetNamedString("requestId");
-            _responsePayloadQueue->Add(ref new PayloadContainer(messageId, payload));
+            
+            if (payloadLenght > 0)
+            {
+                std::vector<unsigned char> data(payloadLenght);
+                if (!data.empty())
+                    reader->ReadBytes(
+                        ::Platform::ArrayReference<unsigned char>(
+                            &data[0], data.size()));
+                auto t = data.data();
+                std::string sName(reinterpret_cast<char*>(t));
+                auto length = sName.length();
+
+                auto realLength = payloadLenght >= length ? length : payloadLenght;
+                
+                auto reader2 = ::Windows::Storage::Streams::DataReader::FromBuffer(content);
+                String^ payload =  reader2->ReadString(realLength);
+                String^ messageId = responseReceivedMessage->GetNamedObject("params")->GetNamedString("requestId");
+                _responsePayloadQueue->Add(ref new PayloadContainer(messageId, payload));
+            }           
             auto dataReceivedMessage = GenerateDataReceivedMessage(responseReceivedMessage, payloadLenght);
             this->PostProcessMessage(dataReceivedMessage);
             auto loadingFinishedMessage = GenerateLoadingFinishedMessage(dataReceivedMessage);
             this->PostProcessMessage(loadingFinishedMessage);
-
         });
         // request message has been used for all the possible response messages --> can be deleted from the dictionary
         DeleteRequestMessage(message->ResponseReceivedEventArgs->ActivityId);

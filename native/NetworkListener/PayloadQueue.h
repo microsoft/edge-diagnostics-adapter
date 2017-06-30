@@ -16,17 +16,18 @@ namespace NetworkProxyLibrary
     public:
         PayloadQueue(int queueSize)
             : _queueSize(queueSize)
-            , _head(0)
-            , _tail(0)
+            , _index(0)
+            , _queueFull(false)
             , _queue(ref new Vector<PayloadContainer^>())
         {};
 
         void Add(PayloadContainer^ x);
+        PayloadContainer^ Get(String^ messageId);
 
     private:
         int _queueSize;
-        int _head;
-        int _tail;
+        int _index;
+        bool _queueFull;
         Vector<PayloadContainer^>^ _queue;
         std::mutex _queueMutex;
     };
