@@ -68,3 +68,11 @@ void NetworkMonitor::StopListeningEdgeProcess()
         _httpListener->StopListening();
     }
 }
+
+void NetworkMonitor::ProcessRequest(JsonObject^ request) 
+{
+    if (_httpListener != nullptr)
+    {
+        _httpListener->ProcessRequest(request);
+    }
+}

@@ -17,16 +17,20 @@ void PayloadQueue::Add(PayloadContainer^ payload)
     _queueMutex.unlock();
 }
 
-PayloadContainer^ PayloadQueue::Get(String^ messageId) 
+PayloadContainer^ PayloadQueue::Get(String^ messageId)
 {
-    int _head = _queueFull ? _index : 0;
+    int lastSlotFull = _queueFull ? _queueSize : _index;
+    PayloadContainer^ result = nullptr;
 
-    for (int i = _head; i < _index; i++)
+    for (int i = 0; i < lastSlotFull; i++)
     {
         auto message = _queue->GetAt(i);
         if (message->ResponseId == messageId)
         {
-            return message;
+            result = message;
+            break;
         }
     }
+
+    return result;
 }

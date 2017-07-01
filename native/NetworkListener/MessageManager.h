@@ -23,25 +23,25 @@ namespace NetworkProxyLibrary
     ref class MessageManager sealed
     {
     public:
-	    MessageManager(unsigned int processId);	
+        MessageManager(unsigned int processId);
         void SendToProcess(Message^ message);
-        
-        JsonObject^ GenerateRequestWilBeSentMessage(HttpDiagnosticProviderRequestSentEventArgs ^data, String^ postPayload = nullptr);
+        void ProcessRequest(JsonObject^ request);
+
+        JsonObject^ GenerateRequestWillBeSentMessage(HttpDiagnosticProviderRequestSentEventArgs ^data, String^ postPayload = nullptr);
         JsonObject^ GenerateResponseReceivedMessage(HttpDiagnosticProviderResponseReceivedEventArgs^ data);
         JsonObject^ GenerateDataReceivedMessage(JsonObject^ responseReceivedMessage, double contentLenght);
         JsonObject^ GenerateLoadingFinishedMessage(JsonObject^ dataReceivedMessage);
-       
-        event MessageProcessedEventHandler^ MessageProcessed;
-        
 
-    private: 
+        event MessageProcessedEventHandler^ MessageProcessed;
+
+    private:
         static const int MessageProcessingRetries = 1;
-        static const int MaxResponsePayloadsStored = 5;
+        static const int MaxResponsePayloadsStored = 100;
 
         ~MessageManager();
         unsigned int _processId;
-        int _currentMessageCounter;     
-        int _idCounters[3] = {1,1,1};
+        int _currentMessageCounter;
+        int _idCounters[3] = { 1,1,1 };
         Map<Guid, JsonObject^>^ _requestSentDictionary;
         PayloadQueue^ _responsePayloadQueue;
 
@@ -51,13 +51,14 @@ namespace NetworkProxyLibrary
 
         void PostProcessMessage(JsonObject^ jsonObject);
         void ProcessMessage(Message^ message);
-        String^ GetNextSequenceId(IdTypes counterType); 
+        String^ GetNextSequenceId(IdTypes counterType);
         void ProcessRequestSentMessage(Message^ message);
-        void ProcessResponseReceivedMessage(Message^ message);        
+        void ProcessResponseReceivedMessage(Message^ message);
         JsonObject^ GetRequestMessage(Guid id);
         void DeleteRequestMessage(Guid id);
         void AddMessageToQueueForRetry(Message^ message);
         void OnRequestInsertedToMap(Guid id);
+        JsonObject^ GenerateGetResponseBodyMessage(int id, String^ requestId);
     };
 
 }

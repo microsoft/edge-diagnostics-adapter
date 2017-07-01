@@ -24,6 +24,7 @@ namespace NetworkProxyLibrary
     internal:
         void StartListening(function<void(const wchar_t*)> callback);
         void StopListening();
+        void ProcessRequest(JsonObject^ request);
 
     private:
         ~HttpListener();

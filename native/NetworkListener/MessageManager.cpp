@@ -64,6 +64,41 @@ void InsertNumber(JsonObject^ json, String^ key, double  value)
     json->Insert(key, JsonValue::CreateNumberValue(value));
 }
 
+void MessageManager::ProcessRequest(JsonObject^ request)
+{
+    int id = (int)request->GetNamedNumber("id", 0);
+    auto method = request->GetNamedString("method", "");
+
+    if (method == "Network.getResponseBody"
+        && request->HasKey("params")
+        && request->GetNamedObject("params")->HasKey("requestId"))
+    {
+        auto requestId = request->GetNamedObject("params")->GetNamedString("requestId");
+        auto response = GenerateGetResponseBodyMessage(id, requestId);
+        PostProcessMessage(response);
+    }
+}
+
+JsonObject^ MessageManager::GenerateGetResponseBodyMessage(int id, String^ requestId)
+{
+    auto payloadContainer = _responsePayloadQueue->Get(requestId);
+    auto response = ref new JsonObject();
+    InsertNumber(response, "id", id);
+    if (payloadContainer == nullptr)
+    {
+        InsertString(response, "error", "Response body for requestId not fond");
+    }
+    else
+    {
+        auto result = ref new JsonObject();
+        InsertString(result, "body", payloadContainer->Payload);
+        result->Insert("base64Encoded", JsonValue::CreateBooleanValue(false));
+        response->Insert("result", result);
+    }
+
+    return response;
+}
+
 void MessageManager::SendToProcess(Message^ message)
 {
     OutputDebugStringW(L"Enter SendToProcess \n");
@@ -115,7 +150,7 @@ void MessageManager::ProcessRequestSentMessage(Message ^ message)
             auto reader = ::Windows::Storage::Streams::DataReader::FromBuffer(content);
             auto payloadLenght = reader->UnconsumedBufferLength;
             String^ payload = payloadLenght > 0 ? reader->ReadString(payloadLenght) : nullptr;
-            JsonObject^ seriealizedMessage = this->GenerateRequestWilBeSentMessage(eventArgs, payload);
+            JsonObject^ seriealizedMessage = this->GenerateRequestWillBeSentMessage(eventArgs, payload);
             this->PostProcessMessage(seriealizedMessage);
             OutputDebugStringW(L"Exit POST ProcessRequestSentMessage \n");
         });
@@ -124,7 +159,7 @@ void MessageManager::ProcessRequestSentMessage(Message ^ message)
     {
         try
         {
-            JsonObject^ serializedMessage = this->GenerateRequestWilBeSentMessage(eventArgs);
+            JsonObject^ serializedMessage = this->GenerateRequestWillBeSentMessage(eventArgs);
             this->PostProcessMessage(serializedMessage);
         }
         catch (const std::exception&)
@@ -166,7 +201,7 @@ void MessageManager::ProcessResponseReceivedMessage(Message^ message)
         {
             auto reader = ::Windows::Storage::Streams::DataReader::FromBuffer(content);
             auto payloadLenght = reader->UnconsumedBufferLength;
-            
+
             if (payloadLenght > 0)
             {
                 std::vector<unsigned char> data(payloadLenght);
@@ -179,12 +214,12 @@ void MessageManager::ProcessResponseReceivedMessage(Message^ message)
                 auto length = sName.length();
 
                 auto realLength = payloadLenght >= length ? length : payloadLenght;
-                
+
                 auto reader2 = ::Windows::Storage::Streams::DataReader::FromBuffer(content);
-                String^ payload =  reader2->ReadString(realLength);
+                String^ payload = reader2->ReadString(realLength);
                 String^ messageId = responseReceivedMessage->GetNamedObject("params")->GetNamedString("requestId");
                 _responsePayloadQueue->Add(ref new PayloadContainer(messageId, payload));
-            }           
+            }
             auto dataReceivedMessage = GenerateDataReceivedMessage(responseReceivedMessage, payloadLenght);
             this->PostProcessMessage(dataReceivedMessage);
             auto loadingFinishedMessage = GenerateLoadingFinishedMessage(dataReceivedMessage);
@@ -277,7 +312,7 @@ String^ ParseResourceTypeFromContentType(String^ contentType)
     return "Other";
 }
 
-JsonObject ^ MessageManager::GenerateRequestWilBeSentMessage(HttpDiagnosticProviderRequestSentEventArgs ^data, String^ postPayload)
+JsonObject ^ MessageManager::GenerateRequestWillBeSentMessage(HttpDiagnosticProviderRequestSentEventArgs ^data, String^ postPayload)
 {
     HttpRequestMessage^ message = data->Message;
     JsonObject^ result = ref new JsonObject();

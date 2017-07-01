@@ -74,6 +74,11 @@ void NetworkProxyLibrary::HttpListener::StopListening()
     }
 }
 
+void HttpListener::ProcessRequest(JsonObject^ request)
+{
+    _messageManager->ProcessRequest(request);
+}
+
 void HttpListener::OnRequestSent(HttpDiagnosticProvider ^sender, HttpDiagnosticProviderRequestSentEventArgs ^args)
 {
     _messageManager->SendToProcess(ref new Message(args));
@@ -85,7 +90,7 @@ void HttpListener::OnResponseReceived(HttpDiagnosticProvider ^sender, HttpDiagno
 }
 
 void HttpListener::OnRequestResponseCompleted(HttpDiagnosticProvider ^sender, HttpDiagnosticProviderRequestResponseCompletedEventArgs ^args)
-{	
+{
 }
 
 void HttpListener::DoCallback(const wchar_t* notification)
