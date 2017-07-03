@@ -39,14 +39,14 @@ void OnMessageReceived(const wchar_t* message);
 void SendMessageToWebSocket(_In_ const wchar_t* message);
 
 int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
-                     _In_opt_ HINSTANCE hPrevInstance,
-                     _In_ LPWSTR    lpCmdLine,
-                     _In_ int       nCmdShow)
+    _In_opt_ HINSTANCE hPrevInstance,
+    _In_ LPWSTR    lpCmdLine,
+    _In_ int       nCmdShow)
 {
     UNREFERENCED_PARAMETER(hPrevInstance);
     UNREFERENCED_PARAMETER(lpCmdLine);
 
-    const wstring PIdParam = L"--process-id=";        
+    const wstring PIdParam = L"--process-id=";
     wstring commandLine = GetCommandLine();
     auto startPIdParam = commandLine.find(PIdParam.c_str());
 
@@ -54,10 +54,10 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
     bool isAutoLaunchActive = commandLine.find(launchParam.c_str()) != string::npos;
 
     if (startPIdParam == string::npos)
-    {       
+    {
         throw ref new InvalidArgumentException(L"Required argument to start the application: --process-id=%processId%");
     }
-        
+
     auto endPIdParam = commandLine.find(L"-", startPIdParam + PIdParam.length());
     wstring paramValue;
     if (endPIdParam == string::npos)
@@ -67,7 +67,7 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
     else
     {
         auto length = endPIdParam - (startPIdParam + PIdParam.length());
-        paramValue = commandLine.substr(startPIdParam + PIdParam.length(), length);       
+        paramValue = commandLine.substr(startPIdParam + PIdParam.length(), length);
     }
     m_edgeProcessId = _wtol(paramValue.c_str());
 
@@ -77,7 +77,7 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
     MyRegisterClass(hInstance);
 
     // Perform application initialization:
-    if (!InitInstance (hInstance, nCmdShow))
+    if (!InitInstance(hInstance, nCmdShow))
     {
         return FALSE;
     }
@@ -86,7 +86,7 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 
     ShowWindow(m_hMainWnd, SW_HIDE);
 
-    if (isAutoLaunchActive) 
+    if (isAutoLaunchActive)
     {
         m_networkMonitor = new NetworkMonitor(m_edgeProcessId);
         m_networkMonitor->StartListeningEdgeProcess(&OnMessageReceived);
@@ -101,9 +101,9 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
             TranslateMessage(&msg);
             DispatchMessage(&msg);
         }
-    }    
+    }
 
-    return (int) msg.wParam;
+    return (int)msg.wParam;
 }
 
 void OnMessageReceived(const wchar_t* message)
@@ -122,17 +122,17 @@ ATOM MyRegisterClass(HINSTANCE hInstance)
 
     wcex.cbSize = sizeof(WNDCLASSEX);
 
-    wcex.style          = CS_HREDRAW | CS_VREDRAW;
-    wcex.lpfnWndProc    = WndProc;
-    wcex.cbClsExtra     = 0;
-    wcex.cbWndExtra     = 0;
-    wcex.hInstance      = hInstance;
-    wcex.hIcon          = LoadIcon(hInstance, MAKEINTRESOURCE(IDI_NetworkProxy));
-    wcex.hCursor        = LoadCursor(nullptr, IDC_ARROW);
-    wcex.hbrBackground  = (HBRUSH)(COLOR_WINDOW+1);
-    wcex.lpszMenuName   = MAKEINTRESOURCEW(IDC_NetworkProxy);
-    wcex.lpszClassName  = szWindowClass;
-    wcex.hIconSm        = LoadIcon(wcex.hInstance, MAKEINTRESOURCE(IDI_SMALL));
+    wcex.style = CS_HREDRAW | CS_VREDRAW;
+    wcex.lpfnWndProc = WndProc;
+    wcex.cbClsExtra = 0;
+    wcex.cbWndExtra = 0;
+    wcex.hInstance = hInstance;
+    wcex.hIcon = LoadIcon(hInstance, MAKEINTRESOURCE(IDI_NetworkProxy));
+    wcex.hCursor = LoadCursor(nullptr, IDC_ARROW);
+    wcex.hbrBackground = (HBRUSH)(COLOR_WINDOW + 1);
+    wcex.lpszMenuName = MAKEINTRESOURCEW(IDC_NetworkProxy);
+    wcex.lpszClassName = szWindowClass;
+    wcex.hIconSm = LoadIcon(wcex.hInstance, MAKEINTRESOURCE(IDI_SMALL));
 
     return RegisterClassExW(&wcex);
 }
@@ -149,22 +149,22 @@ ATOM MyRegisterClass(HINSTANCE hInstance)
 //
 BOOL InitInstance(HINSTANCE hInstance, int nCmdShow)
 {
-   hInst = hInstance; // Store instance handle in our global variable   
-   
-   HWND hWnd = CreateWindowW(szWindowClass, nullptr, 0,
-   0, 0, 0, 0, nullptr, nullptr, hInstance, nullptr);
-   
-   if (!hWnd)
-   {
-      return FALSE;
-   }
-   
-   ShowWindow(hWnd, nCmdShow);       
-   UpdateWindow(hWnd);
+    hInst = hInstance; // Store instance handle in our global variable   
 
-   m_hMainWnd = hWnd;
+    HWND hWnd = CreateWindowW(szWindowClass, nullptr, 0,
+        0, 0, 0, 0, nullptr, nullptr, hInstance, nullptr);
 
-   return TRUE;
+    if (!hWnd)
+    {
+        return FALSE;
+    }
+
+    ShowWindow(hWnd, nCmdShow);
+    UpdateWindow(hWnd);
+
+    m_hMainWnd = hWnd;
+
+    return TRUE;
 }
 
 #pragma pack(push, 1)
@@ -197,47 +197,57 @@ enum CopyDataPayload_ProcSignature : ULONG_PTR
     StringMessage_Signature
 };
 
+void SendEmptyResponse(int responseId)
+{
+    JsonObject^ response = ref new JsonObject();
+    response->Insert("id", JsonValue::CreateNumberValue(responseId));
+    response->Insert("result", ref new JsonObject());
+    SendMessageToWebSocket(response->ToString()->Data());
+}
+
 void OnMessageFromWebSocket(UINT nMsg, WPARAM wParam, LPARAM lParam)
-{           
+{
     m_serverHwnd = reinterpret_cast<HWND>(wParam);
     // Scope for the copied data
     {
         PCOPYDATASTRUCT pCopyDataStruct = reinterpret_cast<PCOPYDATASTRUCT>(lParam);
-        
+
         // Copy the data so that we can handle the message and unblock the SendMessage caller
         unique_ptr<COPYDATASTRUCT, void(*)(COPYDATASTRUCT*)> spParams(::MakeCopyDataStructCopy(pCopyDataStruct), ::FreeCopyDataStructCopy);
-        
+
         PCOPYDATASTRUCT pParams = spParams.release();
 
         // Get the string message from the structure
         CopyDataPayload_StringMessage_Data* pMessage = reinterpret_cast<CopyDataPayload_StringMessage_Data*>(pParams->lpData);
         LPCWSTR lpString = reinterpret_cast<LPCWSTR>(reinterpret_cast<BYTE*>(pMessage) + pMessage->uMessageOffset);
 
-        String^ message = ref new String(lpString);        
+        String^ message = ref new String(lpString);
         JsonObject^ jsonMessage;
         bool messageParsed = JsonObject::TryParse(message, &jsonMessage);
 
         if (messageParsed)
         {
-            int id = (int)jsonMessage->GetNamedNumber("id", 0);            
-            auto method = jsonMessage->GetNamedString("method");
-                    
+            int id = (int)jsonMessage->GetNamedNumber("id", 0);
+            auto method = jsonMessage->GetNamedString("method", "");
+
             if (method == "Network.enable")
             {
                 if (m_networkMonitor == nullptr)
                 {
                     m_networkMonitor = new NetworkMonitor(m_edgeProcessId);
                 }
-                m_networkMonitor->StartListeningEdgeProcess(&OnMessageReceived);                
+                m_networkMonitor->StartListeningEdgeProcess(&OnMessageReceived);
+                SendEmptyResponse(id);
             }
             else if (method == "Network.disable")
             {
                 m_networkMonitor->StopListeningEdgeProcess();
+                SendEmptyResponse(id);
             }
-            JsonObject^ response = ref new JsonObject();
-            response->Insert("id", JsonValue::CreateNumberValue(id));
-            response->Insert("result", ref new JsonObject());
-            SendMessageToWebSocket(response->ToString()->Data());
+            else
+            {
+                m_networkMonitor->ProcessRequest(jsonMessage);
+            }            
         }
     }
 }
@@ -293,25 +303,25 @@ void SendMessageToWebSocket(_In_ const wchar_t* message)
 //
 //
 LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
-{    
+{
     switch (message)
     {
     case WM_COMMAND:
-        {
-        }
-        break;
+    {
+    }
+    break;
     case WM_PAINT:
-        {
-        }
-        break;
+    {
+    }
+    break;
     case WM_DESTROY:
         PostQuitMessage(0);
-        break;    
+        break;
     case WM_COPYDATA:
-        OnMessageFromWebSocket(message, wParam, lParam);       
+        OnMessageFromWebSocket(message, wParam, lParam);
         break;
 
-    default:        
+    default:
         return DefWindowProc(hWnd, message, wParam, lParam);
     }
     return 0;

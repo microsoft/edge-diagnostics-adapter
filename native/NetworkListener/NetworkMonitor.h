@@ -14,6 +14,7 @@ namespace NetworkProxyLibrary
         ~NetworkMonitor();
         int StartListeningEdgeProcess(std::function<void(const wchar_t*)> callback);
         void StopListeningEdgeProcess();
+        void ProcessRequest(JsonObject^ request);
 
     private:
         HttpListener^ _httpListener;

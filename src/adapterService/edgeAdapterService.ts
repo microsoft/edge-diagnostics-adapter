@@ -46,7 +46,7 @@ export module EdgeAdapter {
         private _idToNetWorkProxyMap: Map<string, edgeAdapter.NetworkProxyInstanceId> = new Map<string, edgeAdapter.NetworkProxyInstanceId>();
         private _edgeToWSMap: Map<edgeAdapter.EdgeInstanceId, ws[]> = new Map<edgeAdapter.EdgeInstanceId, ws[]>();
         private _diagLogging: boolean = false;
-        private _newtworkProxyImplementedRequests: Array<string> = new Array<string>('Network.enable', 'Network.disable');
+        private _newtworkProxyImplementedRequests: Array<string> = new Array<string>('Network.enable', 'Network.disable', 'Network.getResponseBody');
 
         constructor(diagLogging: boolean) {
             this._diagLogging = diagLogging;
