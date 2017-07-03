@@ -9,6 +9,9 @@
 #include <collection.h>
 #include <ppltasks.h>
 
+#include "base64.h"
+
+
 using namespace std;
 using namespace Concurrency;
 using namespace Platform::Collections;
@@ -83,18 +86,18 @@ JsonObject^ MessageManager::GenerateGetResponseBodyMessage(int id, String^ reque
 {
     auto payloadContainer = _responsePayloadQueue->Get(requestId);
     auto response = ref new JsonObject();
+    auto result = ref new JsonObject();
     InsertNumber(response, "id", id);
     if (payloadContainer == nullptr)
     {
-        InsertString(response, "error", "Response body for requestId not fond");
+        InsertString(result, "body", "");
     }
     else
     {
-        auto result = ref new JsonObject();
         InsertString(result, "body", payloadContainer->Payload);
-        result->Insert("base64Encoded", JsonValue::CreateBooleanValue(false));
-        response->Insert("result", result);
     }
+    result->Insert("base64Encoded", JsonValue::CreateBooleanValue(true));
+    response->Insert("result", result);
 
     return response;
 }
@@ -200,27 +203,33 @@ void MessageManager::ProcessResponseReceivedMessage(Message^ message)
         create_task(message->ResponseReceivedEventArgs->Message->Content->ReadAsBufferAsync()).then([this, responseReceivedMessage](IBuffer^ content)
         {
             auto reader = ::Windows::Storage::Streams::DataReader::FromBuffer(content);
-            auto payloadLenght = reader->UnconsumedBufferLength;
 
-            if (payloadLenght > 0)
+            double realLength = 0;
+            auto chunkSize = reader->UnconsumedBufferLength;
+            auto offset = 0;
+            std::vector<unsigned char> data(chunkSize * 2);
+
+            while (chunkSize > 0)
             {
-                std::vector<unsigned char> data(payloadLenght);
-                if (!data.empty())
-                    reader->ReadBytes(
-                        ::Platform::ArrayReference<unsigned char>(
-                            &data[0], data.size()));
-                auto t = data.data();
-                std::string sName(reinterpret_cast<char*>(t));
-                auto length = sName.length();
-
-                auto realLength = payloadLenght >= length ? length : payloadLenght;
-
-                auto reader2 = ::Windows::Storage::Streams::DataReader::FromBuffer(content);
-                String^ payload = reader2->ReadString(realLength);
-                String^ messageId = responseReceivedMessage->GetNamedObject("params")->GetNamedString("requestId");
-                _responsePayloadQueue->Add(ref new PayloadContainer(messageId, payload));
+                if (chunkSize + offset > data.capacity()) data.resize((chunkSize + offset) * 2);
+                reader->ReadBytes(
+                    ::Platform::ArrayReference<unsigned char>(
+                        &data[offset], chunkSize));
+                offset += chunkSize;
+                chunkSize = reader->UnconsumedBufferLength;
             }
-            auto dataReceivedMessage = GenerateDataReceivedMessage(responseReceivedMessage, payloadLenght);
+
+            auto pInput = reinterpret_cast<const char*>(const_cast<const unsigned char*>(data.data()));
+            auto output = std::string(Base64::EncodedLength(offset), '\0');
+            Base64::Encode(pInput, offset, &output[0], output.size());
+
+            std::wstring_convert<std::codecvt_utf8_utf16<wchar_t>> converter;
+            std::wstring wide = converter.from_bytes(output);
+            String^ payload64 = ref new String(wide.data());
+
+            String^ messageId = responseReceivedMessage->GetNamedObject("params")->GetNamedString("requestId");
+            _responsePayloadQueue->Add(ref new PayloadContainer(messageId, payload64));
+            auto dataReceivedMessage = GenerateDataReceivedMessage(responseReceivedMessage, realLength);
             this->PostProcessMessage(dataReceivedMessage);
             auto loadingFinishedMessage = GenerateLoadingFinishedMessage(dataReceivedMessage);
             this->PostProcessMessage(loadingFinishedMessage);

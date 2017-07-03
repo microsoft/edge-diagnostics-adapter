@@ -197,6 +197,14 @@ enum CopyDataPayload_ProcSignature : ULONG_PTR
     StringMessage_Signature
 };
 
+void SendEmptyResponse(int responseId)
+{
+    JsonObject^ response = ref new JsonObject();
+    response->Insert("id", JsonValue::CreateNumberValue(responseId));
+    response->Insert("result", ref new JsonObject());
+    SendMessageToWebSocket(response->ToString()->Data());
+}
+
 void OnMessageFromWebSocket(UINT nMsg, WPARAM wParam, LPARAM lParam)
 {
     m_serverHwnd = reinterpret_cast<HWND>(wParam);
@@ -229,19 +237,17 @@ void OnMessageFromWebSocket(UINT nMsg, WPARAM wParam, LPARAM lParam)
                     m_networkMonitor = new NetworkMonitor(m_edgeProcessId);
                 }
                 m_networkMonitor->StartListeningEdgeProcess(&OnMessageReceived);
+                SendEmptyResponse(id);
             }
             else if (method == "Network.disable")
             {
                 m_networkMonitor->StopListeningEdgeProcess();
+                SendEmptyResponse(id);
             }
             else
             {
                 m_networkMonitor->ProcessRequest(jsonMessage);
-            }
-            JsonObject^ response = ref new JsonObject();
-            response->Insert("id", JsonValue::CreateNumberValue(id));
-            response->Insert("result", ref new JsonObject());
-            SendMessageToWebSocket(response->ToString()->Data());
+            }            
         }
     }
 }

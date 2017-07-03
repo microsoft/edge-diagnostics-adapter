@@ -189,6 +189,7 @@
     <Text Include="ReadMe.txt" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="base64.h" />
     <ClInclude Include="PayloadQueue.h" />
     <ClInclude Include="HttpListener.h" />
     <ClInclude Include="Message.h" />
