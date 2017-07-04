@@ -204,7 +204,6 @@ void MessageManager::ProcessResponseReceivedMessage(Message^ message)
         {
             auto reader = ::Windows::Storage::Streams::DataReader::FromBuffer(content);
 
-            double realLength = 0;
             auto chunkSize = reader->UnconsumedBufferLength;
             auto offset = 0;
             std::vector<unsigned char> data(chunkSize * 2);
@@ -229,7 +228,7 @@ void MessageManager::ProcessResponseReceivedMessage(Message^ message)
 
             String^ messageId = responseReceivedMessage->GetNamedObject("params")->GetNamedString("requestId");
             _responsePayloadQueue->Add(ref new PayloadContainer(messageId, payload64));
-            auto dataReceivedMessage = GenerateDataReceivedMessage(responseReceivedMessage, realLength);
+            auto dataReceivedMessage = GenerateDataReceivedMessage(responseReceivedMessage, offset);
             this->PostProcessMessage(dataReceivedMessage);
             auto loadingFinishedMessage = GenerateLoadingFinishedMessage(dataReceivedMessage);
             this->PostProcessMessage(loadingFinishedMessage);
