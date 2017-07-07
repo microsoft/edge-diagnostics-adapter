@@ -211,6 +211,10 @@ module EdgeDiagnosticsAdapter {
                             }
                             break;
 
+                        case "Network":
+                            networkHandler.processMessage(methodParts[1], request);                            
+                            break;
+
                         default:
                             this.postResponse(request.id, {});
                             break;

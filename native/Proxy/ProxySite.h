@@ -1,4 +1,4 @@
-//
+﻿//
 // Copyright (C) Microsoft. All rights reserved.
 //
 
@@ -7,6 +7,7 @@
 #include "../DebuggerCore/DebugThreadWindowMessages.h"
 #include "BrowserHost.h"
 #include "BrowserMessageQueue.h"
+
 
 struct ThreadParams
 {
