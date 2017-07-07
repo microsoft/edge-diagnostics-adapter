@@ -79,31 +79,36 @@ module EdgeDiagnosticsAdapter {
             }
         }
 
-        private createProcessedResult(resultFromEval: any, exeptionWasThrown: boolean) : IWebKitResult{
+        private createProcessedResult(resultFromEval: any, exceptionWasThrown: boolean) : IWebKitResult{
             var id = null;
             var description = (resultFromEval ? resultFromEval.toString() : "");
             var value = resultFromEval;
             var processedResult: IWebKitResult;
 
-            if (resultFromEval && typeof resultFromEval === "object") {
-                        id = "1";
-                        description = "Object";
-                        value = null;
-                    }
-
-                    var resultDesc = {
-                        objectId: id,
-                        type: "" + typeof value,
-                        value: value,
-                        description: description
-                    };
-
-                    processedResult = {
+            if(exceptionWasThrown){
+                processedResult = {
                         result: {
-                            wasThrown: exeptionWasThrown,
-                            result: resultDesc
+                            exceptionDetails: {
+                                resultFromEval
+                            },
+                            result: {}
                         }
                     };
+            }
+            else {
+                var resultDesc = {                   
+                    type: typeof value,
+                    value: value,
+                    description: description
+                };
+
+                processedResult = {
+                    result: {                        
+                        result: resultDesc
+                    }
+                };
+            }
+
             return processedResult;
         }
     }   
