@@ -97,7 +97,7 @@ module EdgeDiagnosticsAdapter {
             }
             else {
                 var resultDesc = {                   
-                    type: "" + typeof value,
+                    type: typeof value,
                     value: value,
                     description: description
                 };
