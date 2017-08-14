@@ -120,7 +120,9 @@ export module EdgeAdapter {
 
                 case '/json/new':
                     // create a new tab 
-                    if (!param) param = "";
+                    if (!param){
+                        param = "";
+                    }
                     this.createNewTab(param, host, response)
                     break;
 
@@ -140,16 +142,25 @@ export module EdgeAdapter {
         }
 
         private createNewTab(param: string, host: any, response: http.ServerResponse) {
-            var initialChromeTabs = this.getEdgeJson(host);
+            let initialChromeTabs = this.getEdgeJson(host);
+            let retries = 200; // Retry for 30 seconds.
 
             if (edgeAdapter.openEdge(param)) {
-                var that = this;
-                setTimeout(function () {
-                    let actualChromeTabs = that.getEdgeJson(host);
-                    let newTabInfo = that.getNewTabInfo(initialChromeTabs, actualChromeTabs, param);
+                const getNewTab = () => {
+                    let actualChromeTabs = this.getEdgeJson(host);
+                    let newTabInfo = this.getNewTabInfo(initialChromeTabs, actualChromeTabs, param);
+
+                    if(!newTabInfo && retries > 0) {
+                        retries--;
+
+                        return setTimeout(getNewTab, 150);
+                    }
+
                     response.write(JSON.stringify(newTabInfo));
                     response.end();
-                }, 1500);
+                }
+
+                return getNewTab();
             } else {
                 response.end();
             }
@@ -162,7 +173,7 @@ export module EdgeAdapter {
                     return element;
                 }
             }
-            return <IChromeInstance>{};
+            return null;
         }
 
         private onWSSConnection(ws: ws): void {
