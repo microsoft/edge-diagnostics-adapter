@@ -50,11 +50,16 @@ module EdgeDiagnosticsAdapter {
             this._windowExternal.sendMessage("postMessage", JSON.stringify(notification)); // todo: should this be postMessage?
         }
 
+        public onNavigate(e: any) {
+            pageHandler.onNavigate();
+            domHandler.onNavigate();
+        };
+
         private addNavigateListener(): void {
             browser.document.defaultView.addEventListener("unload", (e: any) => {
-                pageHandler.onNavigate();
-                domHandler.onNavigate();
+                browser.document.defaultView.removeEventListener("load", this.onNavigate);
             });
+            browser.document.defaultView.addEventListener("load", this.onNavigate);
         }
 
         private addBeforeScriptExecuteListener(): void {
@@ -126,7 +131,7 @@ module EdgeDiagnosticsAdapter {
                                     var isPreviewEdit: boolean = request.params.isPreview;
 
                                     var processedResult: IWebKitResult;
-                                    
+
                                     // Not applying the edit and as all the return values are related to call stacks we're just going to return
                                     if (isPreviewEdit) {
                                         processedResult = {
@@ -179,10 +184,10 @@ module EdgeDiagnosticsAdapter {
                                 case "setScriptSource":
                                     var scriptId: number = parseInt(request.params.scriptId);
                                     var scriptSource: string = request.params.scriptSource;
-                                    var isPreviewEdit: boolean = (request.params.isPreview)? true: false;
+                                    var isPreviewEdit: boolean = (request.params.isPreview) ? true : false;
 
                                     var processedResult: IWebKitResult;
-                                    
+
                                     // Not applying the edit and as all the return values are related to call stacks so we're just going to return
                                     if (isPreviewEdit) {
                                         processedResult = {
@@ -191,7 +196,7 @@ module EdgeDiagnosticsAdapter {
                                     } else {
                                         try {
                                             // Todo: Make this work for script documents in different windows
-                                            var result:any = diagnosticsScript.editSource(<any>browser.document.defaultView, scriptId, scriptSource);
+                                            var result: any = diagnosticsScript.editSource(<any>browser.document.defaultView, scriptId, scriptSource);
 
                                             // The Chrome API works when at a breakpoint and sends back changes stacks etc.
                                             // As Chakra doesn't support editting when at a breakpoint we can't return any stacks or the like
@@ -212,7 +217,7 @@ module EdgeDiagnosticsAdapter {
                             break;
 
                         case "Network":
-                            networkHandler.processMessage(methodParts[1], request);                            
+                            networkHandler.processMessage(methodParts[1], request);
                             break;
 
                         default:

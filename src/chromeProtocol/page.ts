@@ -341,7 +341,7 @@ module EdgeDiagnosticsAdapter {
 
             browserHandler.postNotification("Page.domContentEventFired", { timestamp: 396680 }); // todo: use an accurate time stamp
             browserHandler.postNotification("Page.loadEventFired", { timestamp: 396680 }); // todo: use an accurate time stamp
-            
+
             docs.forEach(doc => {
                 browserHandler.postNotification("Page.frameStoppedLoading", { frameId: Common.getiframeId(doc) });
             });
@@ -373,7 +373,7 @@ module EdgeDiagnosticsAdapter {
                 if (this._screencastSession) {
                     // Session has already started so disposing of the last one.
                     this._screencastSession.dispose();
-                } 
+                }
 
                 this._screencastSession = new ScreencastSession(format, quality, maxWidth, maxHeight);
                 this._screencastSession.start();
@@ -516,6 +516,8 @@ module EdgeDiagnosticsAdapter {
 
             try {
                 if (request.params.url) {
+                    browser.document.defaultView.stop();
+                    browser.document.defaultView.removeEventListener('load', browserHandler.onNavigate);
                     browser.executeScript("window.location.href = '" + request.params.url + "'");
 
                     processedResult = {

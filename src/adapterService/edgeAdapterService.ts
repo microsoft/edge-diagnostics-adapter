@@ -120,7 +120,7 @@ export module EdgeAdapter {
 
                 case '/json/new':
                     // create a new tab 
-                    if (!param){
+                    if (!param) {
                         param = "";
                     }
                     this.createNewTab(param, host, response)
@@ -150,7 +150,7 @@ export module EdgeAdapter {
                     let actualChromeTabs = this.getEdgeJson(host);
                     let newTabInfo = this.getNewTabInfo(initialChromeTabs, actualChromeTabs, param);
 
-                    if(!newTabInfo && retries > 0) {
+                    if (!newTabInfo && retries > 0) {
                         retries--;
 
                         return setTimeout(getNewTab, 150);
@@ -173,6 +173,7 @@ export module EdgeAdapter {
                     return element;
                 }
             }
+
             return null;
         }
 
@@ -195,10 +196,12 @@ export module EdgeAdapter {
 
             if (this._guidToIdMap.has(guid)) {
                 const id = this._guidToIdMap.get(guid);
+
                 instanceId = this._idToEdgeMap.get(id);
                 if (!instanceId) {
                     // New connection
                     instanceId = edgeAdapter.connectTo(id);
+
                     if (instanceId) {
                         this.injectAdapterFiles(instanceId);
                         this._idToEdgeMap.set(id, instanceId);
