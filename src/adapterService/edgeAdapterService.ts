@@ -1,11 +1,11 @@
-//
+﻿//
 // Copyright (C) Microsoft. All rights reserved.
 //
 
 // Override require to pick the correct addon architecture at runtime
-(function() {
+(function () {
     var originalReq = require;
-    require = <any>function(path: string) {
+    require = <any>function (path: string) {
         if (path !== "../../lib/Addon.node") {
             return originalReq(path);
         } else {
@@ -25,13 +25,13 @@
     }
 })();
 
-import {IChromeInstance} from '../../lib/EdgeAdapterInterfaces'
+import { IChromeInstance } from '../../lib/EdgeAdapterInterfaces'
 import * as edgeAdapter from '../../lib/Addon.node';
 import * as http from 'http';
 import * as ws from 'ws';
 import * as fs from 'fs';
 import * as crypto from 'crypto';
-import {Server as WebSocketServer} from 'ws';
+import { Server as WebSocketServer } from 'ws';
 
 declare var __dirname;
 
@@ -43,10 +43,12 @@ export module EdgeAdapter {
         private _chromeToolsPort: number;
         private _guidToIdMap: Map<string, string> = new Map<string, string>();
         private _idToEdgeMap: Map<string, edgeAdapter.EdgeInstanceId> = new Map<string, edgeAdapter.EdgeInstanceId>();
+        private _idToNetWorkProxyMap: Map<string, edgeAdapter.NetworkProxyInstanceId> = new Map<string, edgeAdapter.NetworkProxyInstanceId>();
         private _edgeToWSMap: Map<edgeAdapter.EdgeInstanceId, ws[]> = new Map<edgeAdapter.EdgeInstanceId, ws[]>();
         private _diagLogging: boolean = false;
+        private _newtworkProxyImplementedRequests: Array<string> = new Array<string>('Network.enable', 'Network.disable', 'Network.getResponseBody');
 
-        constructor (diagLogging: boolean) {
+        constructor(diagLogging: boolean) {
             this._diagLogging = diagLogging;
         }
 
@@ -75,13 +77,18 @@ export module EdgeAdapter {
         private onServerRequest(request: http.IncomingMessage, response: http.ServerResponse): void {
             // Normalize request url
             let url = request.url.trim().toLocaleLowerCase();
+            // Extract parameter list
+            // TODO: improve the parameter extraction
+            let urlParts = this.extractParametersFromUrl(url);
+            url = urlParts.url;
+            let param = urlParts.paramChain;
             if (url.lastIndexOf('/') == url.length - 1) {
                 url = url.substr(0, url.length - 1);
             }
 
             const host = request.headers.host || "localhost";
 
-            switch(url){
+            switch (url) {
                 case '/json':
                 case '/json/list':
                     // Respond with json
@@ -111,12 +118,63 @@ export module EdgeAdapter {
                     response.end();
                     break;
 
+                case '/json/new':
+                    // create a new tab 
+                    if (!param) {
+                        param = "";
+                    }
+                    this.createNewTab(param, host, response)
+                    break;
+
+                case '/json/close':
+                    // close a tab
+                    response.writeHead(200, { "Content-Type": "text/html" });
+                    this.closeEdgeInstance(param);
+                    response.end();
+                    break;
+
                 default:
                     // Not found
                     response.writeHead(404, { "Content-Type": "text/html" });
                     response.end();
                     break;
             }
+        }
+
+        private createNewTab(param: string, host: any, response: http.ServerResponse) {
+            let initialChromeTabs = this.getEdgeJson(host);
+            let retries = 200; // Retry for 30 seconds.
+
+            if (edgeAdapter.openEdge(param)) {
+                const getNewTab = () => {
+                    let actualChromeTabs = this.getEdgeJson(host);
+                    let newTabInfo = this.getNewTabInfo(initialChromeTabs, actualChromeTabs, param);
+
+                    if (!newTabInfo && retries > 0) {
+                        retries--;
+
+                        return setTimeout(getNewTab, 150);
+                    }
+
+                    response.write(JSON.stringify(newTabInfo));
+                    response.end();
+                }
+
+                return getNewTab();
+            } else {
+                response.end();
+            }
+        }
+
+        private getNewTabInfo(initialInstances: IChromeInstance[], actualInstances: IChromeInstance[], url: string): IChromeInstance {
+            for (var index = 0; index < actualInstances.length; index++) {
+                let element = actualInstances[index];
+                if (!initialInstances.some(x => x.id == element.id)) {
+                    return element;
+                }
+            }
+
+            return null;
         }
 
         private onWSSConnection(ws: ws): void {
@@ -134,13 +192,16 @@ export module EdgeAdapter {
 
             let succeeded = false;
             let instanceId: edgeAdapter.EdgeInstanceId = null;
+            let networkInstanceId: edgeAdapter.NetworkProxyInstanceId = null;
 
             if (this._guidToIdMap.has(guid)) {
                 const id = this._guidToIdMap.get(guid);
+
                 instanceId = this._idToEdgeMap.get(id);
                 if (!instanceId) {
                     // New connection
                     instanceId = edgeAdapter.connectTo(id);
+
                     if (instanceId) {
                         this.injectAdapterFiles(instanceId);
                         this._idToEdgeMap.set(id, instanceId);
@@ -154,15 +215,27 @@ export module EdgeAdapter {
                     this._edgeToWSMap.set(instanceId, sockets);
                     succeeded = true;
                 }
+                networkInstanceId = this._idToNetWorkProxyMap.get(id);
+                if (!networkInstanceId) {
+                    networkInstanceId = edgeAdapter.createNetworkProxyFor(id);
+                    if (networkInstanceId) {
+                        this._idToNetWorkProxyMap.set(id, networkInstanceId);
+                        this._idToNetWorkProxyMap.set(networkInstanceId, id);
+                    }
+                }
             }
 
-            if (succeeded) {
+            if (succeeded && networkInstanceId) {
                 // Forward messages to the proxy
                 ws.on('message', (msg) => {
                     if (this._diagLogging) {
                         console.log("Client:", instanceId, msg);
                     }
-                    edgeAdapter.forwardTo(instanceId, msg);
+                    if (this.isMessageForNetworkProxy(msg)) {
+                        edgeAdapter.forwardTo(networkInstanceId, msg);
+                    } else {
+                        edgeAdapter.forwardTo(instanceId, msg);
+                    }
                 });
 
                 const removeSocket = (instanceId: edgeAdapter.EdgeInstanceId) => {
@@ -191,12 +264,36 @@ export module EdgeAdapter {
             this.onLogMessage(message);
         }
 
+        private isMessageForNetworkProxy(requestMessage: string): boolean {
+            var parsedMessage: Object;
+            try {
+                parsedMessage = JSON.parse(requestMessage);
+            } catch (SyntaxError) {
+                console.log("Error parsing request message: ", requestMessage);
+                return false;
+            }
+            let requestType = parsedMessage['method'] as string;
+
+            return this._newtworkProxyImplementedRequests.indexOf(requestType) != -1;
+        }
+
         private onEdgeMessage(instanceId: edgeAdapter.EdgeInstanceId, msg: string): void {
             if (this._diagLogging) {
                 console.log("EdgeService:", instanceId, msg);
             }
-            if (this._edgeToWSMap.has(instanceId)) {
-                const sockets = this._edgeToWSMap.get(instanceId)
+
+            let edgeProxyId;
+            if (this._idToNetWorkProxyMap.has(instanceId)) {
+                // message comes from network proxy, we get he edge proxy id
+                const id = this._idToNetWorkProxyMap.get(instanceId)
+                edgeProxyId = this._idToEdgeMap.get(id);
+            }
+            else {
+                edgeProxyId = instanceId;
+            }
+
+            if (this._edgeToWSMap.has(edgeProxyId)) {
+                const sockets = this._edgeToWSMap.get(edgeProxyId)
                 for (let i = 0; i < sockets.length; i++) {
                     sockets[i].send(msg);
                 }
@@ -209,17 +306,18 @@ export module EdgeAdapter {
 
         private injectAdapterFiles(instanceId: edgeAdapter.EdgeInstanceId): void {
             const files: { engine: edgeAdapter.EngineType, filename: string }[] = [
-                { engine: "browser", filename: "Assert.js" },
-                { engine: "browser", filename: "Common.js" },
-                { engine: "browser", filename: "Browser.js" },
-                { engine: "browser", filename: "DOM.js" },
-                { engine: "browser", filename: "Runtime.js" },
-                { engine: "browser", filename: "Page.js" },
-                { engine: "browser", filename: "CSSParser.js" },
-                { engine: "browser", filename: "BrowserTool.js" },
-                { engine: "debugger", filename: "Assert.js" },
-                { engine: "debugger", filename: "Common.js" },
-                { engine: "debugger", filename: "Debugger.js" },
+                { engine: "browser", filename: "assert.js" },
+                { engine: "browser", filename: "common.js" },
+                { engine: "browser", filename: "browser.js" },
+                { engine: "browser", filename: "dom.js" },
+                { engine: "browser", filename: "runtime.js" },
+                { engine: "browser", filename: "page.js" },
+                { engine: "browser", filename: "CssParser.js" },
+                { engine: "browser", filename: "browserTool.js" },
+                { engine: "browser", filename: "network.js" },
+                { engine: "debugger", filename: "assert.js" },
+                { engine: "debugger", filename: "common.js" },
+                { engine: "debugger", filename: "debugger.js" },
             ];
 
             for (let i = 0; i < files.length; i++) {
@@ -283,7 +381,7 @@ export module EdgeAdapter {
             return JSON.stringify(version);
         }
 
-        private getChromeProtocol():string {
+        private getChromeProtocol(): string {
             const script = fs.readFileSync(__dirname + '/../chromeProtocol/protocol.json', 'utf8');
             return script;
         }
@@ -291,6 +389,54 @@ export module EdgeAdapter {
         private createGuid(): string {
             const g: string = crypto.createHash('md5').update(Math.random().toString()).digest('hex').toUpperCase();
             return `${g.substring(0, 8)}-${g.substring(9, 13)}-${g.substring(13, 17)}-${g.substring(17, 21)}-${g.substring(21, 31)}`
+        }
+
+        private extractParametersFromUrl(url: string): { url: string, paramChain: string } {
+            let parameters;
+            const closeUrl = '/json/close';
+
+            if (url.indexOf('/json/new') != -1) {
+                const urlSegements = url.split('?');
+                if (urlSegements.length > 1) {
+                    url = urlSegements[0];
+                    parameters = urlSegements[1];
+                }
+            } else if (url.indexOf(closeUrl) != -1) {
+                parameters = url.replace(`${closeUrl}/`, '');
+                url = url.slice(0, closeUrl.length);
+            }
+
+            return { url: url, paramChain: parameters };
+        }
+
+        private closeEdgeInstance(guid: string): boolean {
+            var edgeResult = false;
+            var networkProxyResult = false;
+
+            const id = this._guidToIdMap.get(guid.toLocaleUpperCase());
+            if (id) {
+                edgeResult = edgeAdapter.closeEdge(id);
+                const networkInstanceId = this._idToNetWorkProxyMap.get(id);
+                if (networkInstanceId) {
+                    networkProxyResult = edgeAdapter.closeNetworkProxyInstance(networkInstanceId);
+                }
+                // tab is closed, clean all the mappings and close connections
+                let instanceId = this._idToEdgeMap.get(id);
+                const sockets = this._edgeToWSMap.get(instanceId)
+                if (sockets) {
+                    for (let i = 0; i < sockets.length; i++) {
+                        sockets[i].removeAllListeners();
+                        sockets[i].close();
+                    }
+                }
+                this._edgeToWSMap.delete(instanceId);
+                this._guidToIdMap.delete(guid.toLocaleUpperCase());
+                this._guidToIdMap.delete(id);
+                this._idToNetWorkProxyMap.delete(id);
+                this._idToNetWorkProxyMap.delete(networkInstanceId);
+                this._idToEdgeMap.delete(id);
+            }
+            return edgeResult && networkProxyResult;
         }
     }
 }
