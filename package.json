@@ -5,7 +5,9 @@
   "main": "out/src/edgeAdapter.js",
   "files": [
     "out\\lib",
-    "out\\src"
+    "out\\src",
+    "redistributable",
+    "scripts"
   ],
   "keywords": [
     "edge",
@@ -37,5 +39,15 @@
     "typescript": "1.8.7",
     "typings": "1.0.4",
     "yargs": "^4.6.0"
+  },
+  "cpu": [
+    "x64",
+    "x32"
+  ],
+  "os": [
+    "win32"
+  ],
+  "scripts": {
+    "postinstall": "node scripts/postinstall.js"
   }
 }
