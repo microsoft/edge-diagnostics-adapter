@@ -8,5 +8,8 @@ before_script:
     - npm install -g typings
     - typings install
 
+install:
+- npm install --ignore-scripts
+
 script:
     - gulp buildscript
