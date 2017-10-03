@@ -1,0 +1,50 @@
+environment:
+  matrix:
+    - APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2017
+      nodejs_version: Stable
+    - APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2017
+      nodejs_version: LTS
+
+platform: x64
+configuration: Release
+
+# Install scripts. (runs after repo cloning)
+install:
+  - ps: Install-Product node $env:nodejs_version x64
+  - ps: Set-AppveyorBuildVariable -Name pkg_version -Value (node -p "require('./package.json').version").trim()
+  - ps: Set-AppveyorBuildVariable -Name bundle_name -Value (node scripts\bundle.js).trim()
+  - ps: Add-AppveyorMessage "node version $((node --version).trim())"
+  - ps: Add-AppveyorMessage "npm version $((npm --version).trim())"
+  - ps: Add-AppveyorMessage "Package version $($env:pkg_version)"
+  - ps: Add-AppveyorMessage "Bundle name $($env:bundle_name)"
+  - npm install --ignore-scripts
+  - call "C:\Program Files (x86)\Microsoft Visual Studio\2017\Community\VC\Auxiliary\Build\vcvars64.bat"
+
+# Post-install test scripts.
+test_script:
+  - npm run build
+
+after_test:
+  - 7z a %bundle_name% out
+  - dir
+  - appveyor PushArtifact %bundle_name%
+
+# Don't actually build.
+build: off
+
+#---------------------------------#
+#     deployment configuration    #
+#---------------------------------#
+
+deploy:
+  release: v$(env:pkg_version)
+  description: 'Unsigned release'
+  provider: GitHub
+  auth_token:
+    secure: YXNTtjYu8cQ8OYNGZq+HwHhq5UOVxmKGDoZtTf+ahKBDy4Qw2Kfb46XUav/K8HDW
+#   artifact: bundle
+  draft: false
+  prerelease: true
+#   on:
+#     branch: master                 # release from master branch only
+#     appveyor_repo_tag: true        # deploy on tag push only

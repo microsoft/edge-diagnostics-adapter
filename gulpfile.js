@@ -12,7 +12,6 @@ const colors = gutil.colors;
 const typescript = require('typescript');
 const sourcemaps = require('gulp-sourcemaps');
 const mocha = require('gulp-mocha');
-const tslint = require('gulp-tslint');
 const msbuild = require("gulp-msbuild");
 const argv = require('yargs').argv;
 var exec = require('child_process').exec;
@@ -23,12 +22,6 @@ var sources = [
     'lib',
     'test',
     'typings'
-].map(function(tsFolder) { return tsFolder + '/**/*.ts'; });
-
-var lintSources = [
-    'src',
-    'lib',
-    'test'
 ].map(function(tsFolder) { return tsFolder + '/**/*.ts'; });
 
 var deploySources = [
@@ -52,23 +45,12 @@ var projectConfig = {
     moduleResolution: "node"
 };
 
-gulp.task('tslint', function() {
-    return gulp.src(lintSources, { base: '.' })
-         .pipe(tslint())
-         .pipe(tslint.report('verbose'));
-});
-
-gulp.task('buildtypescript', function () {
+gulp.task('buildscript', function () {
 	return gulp.src(sources, { base: '.' })
         .pipe(sourcemaps.init())
         .pipe(ts(projectConfig)).js
         .pipe(sourcemaps.write('.', { includeContent: false, sourceRoot: 'file:///' + __dirname }))
         .pipe(gulp.dest('out'));
-});
-
-gulp.task('buildscript', ['buildtypescript', 'tslint'], function() {
-    return gulp.src(deploySources, { base: '.' })
-            .pipe(gulp.dest('out'));
 });
 
 function logExec(stdout, stderr) {

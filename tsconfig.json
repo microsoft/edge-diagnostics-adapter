@@ -10,8 +10,6 @@
     "exclude": [
         "native",
         "node_modules",
-        "out",
-        "typings/browser",
-        "typings/browser.d.ts"
+        "out"
     ]
 }
