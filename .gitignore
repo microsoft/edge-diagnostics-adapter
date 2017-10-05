@@ -12,11 +12,12 @@
 .vs/
 
 # Other folders
+build/
+native/*/Output/
+native/*/build/
 node_modules/
 out/
 typings/
-native/*/Output/
-native/*/build/
 
 #Visual C++ unwanted files
 *.ipch

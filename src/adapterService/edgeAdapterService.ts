@@ -1,32 +1,13 @@
-﻿//
+﻿///<reference path='../../lib/Addon.node.d.ts' />
+//
 // Copyright (C) Microsoft. All rights reserved.
 //
 
-// Override require to pick the correct addon architecture at runtime
-(function () {
-    var originalReq = require;
-    require = <any>function (path: string) {
-        if (path !== "../../lib/Addon.node") {
-            return originalReq(path);
-        } else {
-            let mod;
-            try {
-                mod = originalReq(path);
-            } catch (ex) {
-                try {
-                    mod = originalReq("../../lib/Addon64.node");
-                } catch (ex) {
-                    // Potential node version mismatch error
-                    console.log(ex.message, ex.stack);
-                }
-            }
-            return mod;
-        }
-    }
-})();
-
-import { IChromeInstance } from '../../lib/EdgeAdapterInterfaces'
+import { IChromeInstance } from '../../lib/EdgeAdapterInterfaces';
 import * as edgeAdapter from '../../lib/Addon.node';
+// const binding_path = binary.find(path.resolve(path.join(__dirname,'../../../package.json')));
+// var edgeAdapter = require(binding_path);
+
 import * as http from 'http';
 import * as ws from 'ws';
 import * as fs from 'fs';

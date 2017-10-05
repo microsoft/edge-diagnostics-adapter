@@ -5,6 +5,6 @@ const package = require('../package.json');
 const pkgName = package.name;
 const pkgVersion = package.version;
 
-const name = `${pkgName}-v${pkgVersion}-node-v${v8Version}-${platform}-${architecture}.zip`;
+const name = `${pkgName}-v${pkgVersion}-node-v${v8Version}-${platform}-${architecture}`;
 
 console.log(name);

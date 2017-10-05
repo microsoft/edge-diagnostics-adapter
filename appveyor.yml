@@ -13,7 +13,7 @@ skip_branch_with_pr: true
 
 # Install scripts. (runs after repo cloning)
 install:
-  - ps: Install-Product node $env:nodejs_version x64
+  - ps: Install-Product node $env:nodejs_version x86
   - ps: Add-AppveyorMessage "node version $((node --version).trim())"
   - ps: Add-AppveyorMessage "npm version $((npm --version).trim())"
   - ps: Add-AppveyorMessage "Package version $($env:pkg_version)"
@@ -21,22 +21,24 @@ install:
   - npm install --ignore-scripts
 
 build_script:
-  - ps: Add-AppveyorMessage "Starting x64 build"
-  - ps: Set-AppveyorBuildVariable -Name pkg_version -Value (node -p "require('./package.json').version").trim()
-  - ps: Set-AppveyorBuildVariable -Name bundle_name -Value (node scripts\bundle.js).trim()
-  - ps: Add-AppveyorMessage "Bundle name $($env:bundle_name)"
-  - npm run build
-  - 7z a %bundle_name% out\lib
-  - appveyor PushArtifact %bundle_name%
-  - ps: Add-AppveyorMessage "Artifact pushed $($env:bundle_name)"
-  - ps: Install-Product node $env:nodejs_version x86
-  - ps: Set-AppveyorBuildVariable -Name pkg_version -Value (node -p "require('./package.json').version").trim()
-  - ps: Set-AppveyorBuildVariable -Name bundle_name -Value (node scripts\bundle.js).trim()
   - ps: Add-AppveyorMessage "Starting x86 build"
+  - ps: Set-AppveyorBuildVariable -Name pkg_version -Value (node -p "require('./package.json').version").trim()
+  - ps: Set-AppveyorBuildVariable -Name bundle_name -Value (node scripts\bundle.js).trim()
   - ps: Add-AppveyorMessage "Bundle name $($env:bundle_name)"
   - npm run build
-  - 7z a %bundle_name% out\lib
-  - appveyor PushArtifact %bundle_name%
+  - 7z a -ttar %bundle_name%.tar out\lib out\src
+  - 7z a %bundle_name%.tar.gz %bundle_name%.tar
+  - appveyor PushArtifact %bundle_name%.tar.gz
+  - ps: Add-AppveyorMessage "Artifact pushed $($env:bundle_name)"
+  - ps: Add-AppveyorMessage "Starting x64 build"
+  - ps: Install-Product node $env:nodejs_version x64
+  - ps: Set-AppveyorBuildVariable -Name pkg_version -Value (node -p "require('./package.json').version").trim()
+  - ps: Set-AppveyorBuildVariable -Name bundle_name -Value (node scripts\bundle.js).trim()
+  - ps: Add-AppveyorMessage "Bundle name $($env:bundle_name)"
+  - npm run build
+  - 7z a -ttar %bundle_name%.tar out\lib out\src
+  - 7z a %bundle_name%.tar.gz %bundle_name%.tar
+  - appveyor PushArtifact %bundle_name%.tar.gz
   - ps: Add-AppveyorMessage "Artifact pushed $($env:bundle_name)"
 
 #---------------------------------#

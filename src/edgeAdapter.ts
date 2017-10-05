@@ -2,8 +2,8 @@
 // Copyright (C) Microsoft. All rights reserved.
 //
 
-import {argv} from 'yargs';
-import {EdgeAdapter} from './adapterService/edgeAdapterService';
+import { argv } from 'yargs';
+import { EdgeAdapter } from './adapterService/edgeAdapterService';
 
 if (argv.h || argv.help || argv["?"]) {
     console.log("node edgeAdapter.js <options>");
