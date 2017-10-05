@@ -5,11 +5,9 @@
         "removeComments": false,
         "target": "es5",
         "sourceMap": true,
-        "outDir": "out"
+        "outDir": "out/src"
     },
-    "exclude": [
-        "native",
-        "node_modules",
-        "out"
+    "include": [
+        "src"
     ]
 }

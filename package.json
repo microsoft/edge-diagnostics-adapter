@@ -4,8 +4,7 @@
   "description": "Microsoft Edge Diagnostics Adapter",
   "main": "out/src/edgeAdapter.js",
   "files": [
-    "out\\lib",
-    "out\\src",
+    "out/src",
     "redistributable",
     "scripts"
   ],
@@ -32,11 +31,10 @@
     "gulp-mocha": "^4.3.1",
     "gulp-msbuild": "^0.5.3",
     "gulp-sequence": "^0.4.6",
-    "gulp-sourcemaps": "^2.6.1",
-    "gulp-typescript": "^3.2.2",
     "gulp-util": "^3.0.8",
     "nan": "^2.7.0",
     "node-gyp": "^3.6.2",
+    "rimraf": "^2.6.2",
     "tslint": "^5.7.0",
     "typescript": "2.5.3",
     "yargs": "^9.0.1"
@@ -46,8 +44,10 @@
     "x32"
   ],
   "scripts": {
-    "buildscript": "gulp buildscript",
-    "build": "npm run lint && npm config set msvs_version 2015 && gulp build",
+    "build": "npm run clean && npm run lint && npm run build:ts && npm run build:native",
+    "build:native": "npm config set msvs_version 2015 && gulp buildnative",
+    "build:ts": "tsc",
+    "clean": "rimraf out",
     "postinstall": "node scripts/postinstall.js",
     "lint": "tslint /src/**/*.ts"
   }

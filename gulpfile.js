@@ -5,12 +5,9 @@
 const gulp = require('gulp');
 const path = require('path');
 const fs = require('fs');
-const ts = require('gulp-typescript');
 const gutil = require('gulp-util');
 const log = gutil.log;
 const colors = gutil.colors;
-const typescript = require('typescript');
-const sourcemaps = require('gulp-sourcemaps');
 const mocha = require('gulp-mocha');
 const msbuild = require("gulp-msbuild");
 const argv = require('yargs').argv;
@@ -35,23 +32,6 @@ var nativeSources = [
     'native/DebuggerCore',
     'native/Proxy',
 ].map(function(tsFolder) { return tsFolder + '/*.vcxproj'; });
-
-var projectConfig = {
-    noImplicitAny: false,
-    target: 'ES5',
-    module: 'commonjs',
-    declaration: true,
-    typescript: typescript,
-    moduleResolution: "node"
-};
-
-gulp.task('buildscript', function () {
-	return gulp.src(sources, { base: '.' })
-        .pipe(sourcemaps.init())
-        .pipe(ts(projectConfig)).js
-        .pipe(sourcemaps.write('.', { includeContent: false, sourceRoot: 'file:///' + __dirname }))
-        .pipe(gulp.dest('out'));
-});
 
 function logExec(stdout, stderr) {
     if (stdout) {
@@ -83,8 +63,6 @@ function getNativeBuildOptions() {
     }
 }
 
-gulp.task('buildnativeprojects',['buildnativeproxy', 'buildnativenetworkproxy']);
-
 gulp.task('buildnativeproxy', function() {
     const opts = getNativeBuildOptions();
     return gulp.src('native/Proxy/Proxy.vcxproj', { base: '.' })
@@ -115,6 +93,8 @@ gulp.task('buildnativenetworkproxy', function() {
             }));
 });
 
+gulp.task('buildnativeprojects',['buildnativeproxy', 'buildnativenetworkproxy']);
+
 gulp.task('buildnativeaddon', ['buildnativeprojects'], function(done) {
     const opts = getNativeBuildOptions();
     const arch = opts.arch == "Win32" ? "ia32" : "x64";
@@ -128,7 +108,6 @@ gulp.task('buildnativeaddon', ['buildnativeprojects'], function(done) {
 });
 
 gulp.task('buildnative', gulpSequence(['buildnativeaddon'], ['copyproxy', 'copynetworkproxy']));
-
 
 gulp.task('copyproxy', function()  {
     const opts = getNativeBuildOptions();
@@ -149,15 +128,6 @@ gulp.task('copynetworkproxy', function()  {
 });
 
 gulp.task('default', ['buildnative']);
-
-gulp.task('buildall', ['buildscript', 'buildnative']);
-
-gulp.task('build', ['buildall']);
-
-gulp.task('watch', ['buildscript'], function() {
-    log('Watching build sources...');
-    return gulp.watch(sources, ['buildscript']);
-});
 
 function test() {
     return gulp.src('out/test/**/*.test.js', { read: false })
