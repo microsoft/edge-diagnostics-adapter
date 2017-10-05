@@ -4,6 +4,7 @@ environment:
       nodejs_version: Stable
     - APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2017
       nodejs_version: LTS
+    - fast_finish: true
 
 platform: x64
 configuration: Release
@@ -26,8 +27,8 @@ test_script:
 
 after_test:
   - 7z a %bundle_name% out
-  - dir
   - appveyor PushArtifact %bundle_name%
+  - ps: Add-AppveyorMessage "Artifact pushed $($env:bundle_name)"
 
 # Don't actually build.
 build: off
@@ -37,14 +38,13 @@ build: off
 #---------------------------------#
 
 deploy:
-  release: v$(env:pkg_version)
+  release: v$(pkg_version)
   description: 'Unsigned release'
   provider: GitHub
   auth_token:
     secure: YXNTtjYu8cQ8OYNGZq+HwHhq5UOVxmKGDoZtTf+ahKBDy4Qw2Kfb46XUav/K8HDW
-#   artifact: bundle
   draft: false
   prerelease: true
-#   on:
-#     branch: master                 # release from master branch only
+  on:
+     branch: master, update-dependencies
 #     appveyor_repo_tag: true        # deploy on tag push only
