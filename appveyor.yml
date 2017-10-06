@@ -16,7 +16,6 @@ install:
   - ps: Install-Product node $env:nodejs_version x86
   - ps: Add-AppveyorMessage "node version $((node --version).trim())"
   - ps: Add-AppveyorMessage "npm version $((npm --version).trim())"
-  - ps: Add-AppveyorMessage "Package version $($env:pkg_version)"
   - call "C:\Program Files (x86)\Microsoft Visual Studio\2017\Community\VC\Auxiliary\Build\vcvars64.bat"
   - npm install --ignore-scripts
 
@@ -24,8 +23,10 @@ build_script:
   - ps: Add-AppveyorMessage "Starting x86 build"
   - ps: Set-AppveyorBuildVariable -Name pkg_version -Value (node -p "require('./package.json').version").trim()
   - ps: Set-AppveyorBuildVariable -Name bundle_name -Value (node scripts\bundle.js).trim()
+  - ps: Add-AppveyorMessage "Package version $($env:pkg_version)"
   - ps: Add-AppveyorMessage "Bundle name $($env:bundle_name)"
   - npm run build
+  - dir /s out
   - 7z a -ttar %bundle_name%.tar out\lib out\src
   - 7z a %bundle_name%.tar.gz %bundle_name%.tar
   - appveyor PushArtifact %bundle_name%.tar.gz
@@ -36,6 +37,7 @@ build_script:
   - ps: Set-AppveyorBuildVariable -Name bundle_name -Value (node scripts\bundle.js).trim()
   - ps: Add-AppveyorMessage "Bundle name $($env:bundle_name)"
   - npm run build
+  - dir /s out
   - 7z a -ttar %bundle_name%.tar out\lib out\src
   - 7z a %bundle_name%.tar.gz %bundle_name%.tar
   - appveyor PushArtifact %bundle_name%.tar.gz
@@ -54,6 +56,5 @@ deploy:
   draft: false
   prerelease: true
   on:
-     branch:
-      - master
-     appveyor_repo_tag: true        # deploy on tag push only
+     branch: master
+     appveyor_repo_tag: true # deploy on tag push only

@@ -2,7 +2,7 @@
   "name": "edge-diagnostics-adapter",
   "version": "0.6.0-unsigned",
   "description": "Microsoft Edge Diagnostics Adapter",
-  "main": "dist/edgeAdapter.js",
+  "main": "out/src/edgeAdapter.js",
   "files": [
     "out/src",
     "redistributable",

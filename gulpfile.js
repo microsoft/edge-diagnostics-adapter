@@ -115,7 +115,7 @@ gulp.task('copyproxy', function () {
     return gulp.src([
         opts.outDir + 'Proxy.dll',
         opts.outDir + 'Proxy.pdb'
-    ], { base: opts.outDir })
+    ])
         .pipe(gulp.dest('out/lib'));
 });
 

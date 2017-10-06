@@ -1527,6 +1527,55 @@
                     "description": "Returns the root DOM node to the caller."
                 },
                 {
+                    "name": "querySelector",
+                    "parameters": [
+                        {
+                            "name": "nodeId",
+                            "$ref": "NodeId",
+                            "description": "Id of the node to query upon."
+                        },
+                        {
+                            "name": "selector",
+                            "type": "string",
+                            "description": "Selector string."
+                        }
+                    ],
+                    "returns": [
+                        {
+                            "name": "nodeId",
+                            "$ref": "NodeId",
+                            "description": "Query selector result."
+                        }
+                    ],
+                    "description": "Executes <code>querySelector</code> on a given node."
+                },
+                {
+                    "name": "querySelectorAll",
+                    "parameters": [
+                        {
+                            "name": "nodeId",
+                            "$ref": "NodeId",
+                            "description": "Id of the node to query upon."
+                        },
+                        {
+                            "name": "selector",
+                            "type": "string",
+                            "description": "Selector string."
+                        }
+                    ],
+                    "returns": [
+                        {
+                            "name": "nodeIds",
+                            "type": "array",
+                            "items": {
+                                "$ref": "NodeId"
+                            },
+                            "description": "Query selector result."
+                        }
+                    ],
+                    "description": "Executes <code>querySelectorAll</code> on a given node."
+                },
+                {
                     "name": "getOuterHTML",
                     "parameters": [
                         {
