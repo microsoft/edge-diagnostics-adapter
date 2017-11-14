@@ -58,7 +58,7 @@
   ],
   "scripts": {
     "copy:static": "cpx \"./src/**/{!(*.ts),.!(ts)}\" out/src",
-    "build": "npm run clean && npm run lint && npm run build:ts && npm run copy:static && npm run build:native",
+    "build": "npm run clean && npm run lint && npm run build:ts && npm run copy:static && prebuild.cmd && npm run build:native",
     "build:native": "npm config set msvs_version 2015 && gulp buildnative",
     "build:ts": "tsc",
     "clean": "rimraf out",

@@ -102,7 +102,9 @@ You can also download the [protocol.json][protocol].
 To build this project you will need [VS2017 Community][vs2017]. Make
 sure to select the Windows 10 14393 SDK in the options.
 
-Then run the following commands:
+You will also need to install the [windows-build-tools][windows-build-tools].
+
+Once you have the previous dependencies, run the following commands:
 
 ```bash
 
@@ -133,3 +135,4 @@ any additional questions or comments.
 [releases]: https://github.com/Microsoft/EdgeDiagnosticsAdapter/releases
 [testsigning]: https://msdn.microsoft.com/en-us/windows/hardware/drivers/install/the-testsigning-boot-configuration-option
 [vs2017]: https://www.visualstudio.com/thank-you-downloading-visual-studio/?sku=Community&rel=15
+[windows-build-tools]: https://npmjs.com/package/windows-build-tools
