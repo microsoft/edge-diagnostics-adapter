@@ -1,12 +1,11 @@
 {
     "variables": {
         "module_name":"Addon",
-        "module_path":"../../out/lib/",
-        "module_arch": ''
+        "module_path":"../../out/lib/"
     },
     "targets": [
         {
-            "target_name": "<(module_name)<(module_arch)",
+            "target_name": "<(module_name)",
             "sources": [ "EdgeFunctions.cpp", "MessageReceiver.cpp", "stdafx.cpp" ],
             'msvs_precompiled_header': 'stdafx.h',
             'msvs_precompiled_source': 'stdafx.cpp',
@@ -36,10 +35,10 @@
         {
             "target_name": "action_after_build",
             "type": "none",
-            "dependencies": [ "<(module_name)<(module_arch)" ],
+            "dependencies": [ "<(module_name)" ],
             "copies": [
                 {
-                    "files": [ "<(PRODUCT_DIR)\<(module_name)<(module_arch).node" ],
+                    "files": [ "<(PRODUCT_DIR)\<(module_name).node" ],
                     "destination": "<(module_path)"
                 }
             ]

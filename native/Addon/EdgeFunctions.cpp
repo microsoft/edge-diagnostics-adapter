@@ -375,7 +375,7 @@ NAN_METHOD(closeEdge)
  #pragma warning(pop)
 
     HRESULT hr = Helpers::CloseWindow(hwnd);
-    
+
     if (hr == S_OK) // S_FALSE is a valid return code
     {
         info.GetReturnValue().Set(true);
@@ -524,28 +524,17 @@ NAN_METHOD(connectTo)
 
         CString path = Helpers::UTF8toUTF16(m_rootPath);
         path.Append(L"\\..\\..\\lib\\");
-        if (is64BitTab)
-        {
-            path.Append(L"Proxy64.dll");
-        }
-        else
-        {
-            path.Append(L"Proxy.dll");
-        }
+        path.Append(L"Proxy.dll");
 
         CComPtr<IOleWindow> spSite;
         hr = Helpers::StartDiagnosticsMode(spDocument, __uuidof(ProxySite), path, __uuidof(spSite), reinterpret_cast<void**>(&spSite.p));
         if (hr == E_ACCESSDENIED && is64BitTab && ::IsWindows8Point1OrGreater())
         {
-            Log("ERROR: Access denied while attempting to connect to a 64 bit tab. The most common solution to this problem is to open an Administrator command prompt, navigate to the folder containing this adapter, and type \"icacls proxy64.dll /grant \"ALL APPLICATION PACKAGES\":(RX)\"");
+            Log("ERROR: Access denied while attempting to connect to a 64 bit tab. The most common solution to this problem is to open an Administrator command prompt, navigate to the folder containing this adapter, and type \"icacls proxy.dll /grant \"ALL APPLICATION PACKAGES\":(RX)\"");
         }
-        else if (hr == ::HRESULT_FROM_WIN32(ERROR_MOD_NOT_FOUND) && is64BitTab)
+        else if (hr == ::HRESULT_FROM_WIN32(ERROR_MOD_NOT_FOUND))
         {
-            Log("ERROR: Module could not be found. Ensure Proxy64.dll exists in the out\\lib\\ folder");
-        }
-        else if (hr == ::HRESULT_FROM_WIN32(ERROR_MOD_NOT_FOUND) && !is64BitTab)
-        {
-            Log("ERROR: Module could not be found. Ensure Proxy.dll exists in the out\\lib\\ folder");
+            Log("ERROR: Module could not be found. Ensure Proxy.dll exists in the out\\lib\\ folder and is for your architecture.");
         }
         else if (hr != S_OK)
         {
@@ -627,7 +616,7 @@ NAN_METHOD(createNetworkProxyFor)
         Nan::ThrowTypeError("Incorrect arguments - createNetworkProxyFor(windowId: string): string");
         return;
     }
-    
+
     String::Utf8Value id(info[0]->ToString());
 #pragma warning(push)
 #pragma warning(disable: 4312) // truncation to int
@@ -636,7 +625,7 @@ NAN_METHOD(createNetworkProxyFor)
 
     info.GetReturnValue().Set(Nan::Null());
 
-    if (!IsWindow(hwnd)) 
+    if (!IsWindow(hwnd))
     {
         Log("Argument windowId is not the identifier of a window");
         return;
@@ -644,13 +633,13 @@ NAN_METHOD(createNetworkProxyFor)
 
     // compose the path to the NetworkProxy app
     CString path = Helpers::UTF8toUTF16(m_rootPath);
-    path.Append(L"\\..\\..\\lib\\");   
-    path.Append(L"NetworkProxy.exe");            
+    path.Append(L"\\..\\..\\lib\\");
+    path.Append(L"NetworkProxy.exe");
 
     LPDWORD processId;
-    GetWindowThreadProcessId(hwnd, processId);    
+    GetWindowThreadProcessId(hwnd, processId);
 
-    CString arguments;    
+    CString arguments;
     arguments.Format(L"--process-id=%d", *processId);
 
     // Launch the process
@@ -693,23 +682,23 @@ NAN_METHOD(createNetworkProxyFor)
         {
             CStringA newId;
             newId.Format("%p", proxyHwnd);
-            info.GetReturnValue().Set(Nan::New<String>(newId).ToLocalChecked());            
+            info.GetReturnValue().Set(Nan::New<String>(newId).ToLocalChecked());
         }
         else
         {
             Log("NetworkProxy hwnd not found.");
-        }        
+        }
     }
     else
     {
         CString msg = L"Could not open NetworkProxy at path: ";
         msg.Append(path);
         CStringA msgUTF8 = Helpers::UTF16toUTF8(msg);
-        Log(msgUTF8);        
-    }        
+        Log(msgUTF8);
+    }
 }
 
-NAN_METHOD(closeNetworkProxyInstance) 
+NAN_METHOD(closeNetworkProxyInstance)
 {
     EnsureInitialized();
     if (info.Length() < 1 || !info[0]->IsString())
@@ -730,7 +719,7 @@ NAN_METHOD(closeNetworkProxyInstance)
         return;
     }
 
-    ::PostMessage(instanceHwnd, WM_DESTROY, 0, 0);   
+    ::PostMessage(instanceHwnd, WM_DESTROY, 0, 0);
 
     info.GetReturnValue().Set(true);
 }

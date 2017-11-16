@@ -1,144 +1,106 @@
-/*---------------------------------------------------------
+/* ---------------------------------------------------------
  * Copyright (C) Microsoft Corporation. All rights reserved.
- *--------------------------------------------------------*/
+ * --------------------------------------------------------*/
 
 const gulp = require('gulp');
-const path = require('path');
 const fs = require('fs');
-const ts = require('gulp-typescript');
+const path = require('path');
 const gutil = require('gulp-util');
 const log = gutil.log;
 const colors = gutil.colors;
-const typescript = require('typescript');
-const sourcemaps = require('gulp-sourcemaps');
 const mocha = require('gulp-mocha');
-const tslint = require('gulp-tslint');
-const msbuild = require("gulp-msbuild");
+const msbuild = require('gulp-msbuild');
 const argv = require('yargs').argv;
-var exec = require('child_process').exec;
-var gulpSequence = require('gulp-sequence');
+const exec = require('child_process').exec;
+const gulpSequence = require('gulp-sequence');
 
-var sources = [
+const sources = [
     'src',
     'lib',
     'test',
     'typings'
-].map(function(tsFolder) { return tsFolder + '/**/*.ts'; });
-
-var lintSources = [
-    'src',
-    'lib',
-    'test'
-].map(function(tsFolder) { return tsFolder + '/**/*.ts'; });
-
-var deploySources = [
-    'src/**/*.html',
-    'src/**/*.css',
-    'src/**/*.json'
-];
-
-var nativeSources = [
-    'native/Common',
-    'native/DebuggerCore',
-    'native/Proxy',
-].map(function(tsFolder) { return tsFolder + '/*.vcxproj'; });
-
-var projectConfig = {
-    noImplicitAny: false,
-    target: 'ES5',
-    module: 'commonjs',
-    declaration: true,
-    typescript: typescript,
-    moduleResolution: "node"
-};
-
-gulp.task('tslint', function() {
-    return gulp.src(lintSources, { base: '.' })
-         .pipe(tslint())
-         .pipe(tslint.report('verbose'));
-});
-
-gulp.task('buildtypescript', function () {
-	return gulp.src(sources, { base: '.' })
-        .pipe(sourcemaps.init())
-        .pipe(ts(projectConfig)).js
-        .pipe(sourcemaps.write('.', { includeContent: false, sourceRoot: 'file:///' + __dirname }))
-        .pipe(gulp.dest('out'));
-});
-
-gulp.task('buildscript', ['buildtypescript', 'tslint'], function() {
-    return gulp.src(deploySources, { base: '.' })
-            .pipe(gulp.dest('out'));
+].map(function (tsFolder) {
+    return tsFolder + '/**/*.ts';
 });
 
 function logExec(stdout, stderr) {
     if (stdout) {
-        stdout.toString().trim().split(/\r?\n/).forEach(line => log(line))
+        stdout.toString().trim()
+            .split(/\r?\n/)
+            .forEach((line) => {
+                log(line);
+            });
     }
 
     if (stderr) {
-        stderr.toString().trim().split(/\r?\n/).forEach(line => log(colors.red(line)));
+        stderr.toString().trim()
+            .split(/\r?\n/)
+            .forEach((line) => {
+                log(colors.red(line));
+            });
     }
 }
 
 function getNativeBuildOptions() {
-    const target = (argv.rebuild ? 'Rebuild' : 'Build');
-    const config = (argv.debug ? 'Debug' : 'Release');
-    const arch = (argv.x64 ? 'x64' : 'Win32');
-    const verbose = (argv.verbose ? '' : 'ErrorsOnly;WarningsOnly')
+    // const target = (argv.rebuild ? 'Rebuild' : 'Build');
+    const config = 'Release';
+    const arch = process.arch === 'x64' ? 'x64' : 'Win32';
+    // const verbose = (argv.verbose ? '' : 'ErrorsOnly;WarningsOnly')
     const outDir = 'out/native/' + config + '/' + arch + '/';
     const networkOutDir = 'out/native/network/' + config + '/' + arch + '/';
-    const outArch =  (argv.x64 ? '64' : '');
+    const outArch = arch === 'x64' ? '64' : '';
 
     return {
-        target: target,
+        target: 'Build',
         config: config,
         arch: arch,
-        verbose: verbose,
+        verbose: 'ErrorsOnly;WarningsOnly',
         outDir: outDir,
         networkOutDir: networkOutDir,
         outArch: outArch
-    }
+    };
 }
 
-gulp.task('buildnativeprojects',['buildnativeproxy', 'buildnativenetworkproxy']);
-
-gulp.task('buildnativeproxy', function() {
+gulp.task('buildnativeproxy', function () {
     const opts = getNativeBuildOptions();
+
     return gulp.src('native/Proxy/Proxy.vcxproj', { base: '.' })
-            .pipe(msbuild({
-                targets: [opts.target],
-                configuration: opts.config,
-                properties: { Platform: opts.arch },
-                stdout: true,
-                stderr: true,
-                logCommand: true,
-                toolsVersion:14,
-                consoleLoggerParameters: opts.verbose
-            }));
+        .pipe(msbuild({
+            targets: [opts.target],
+            configuration: opts.config,
+            properties: { Platform: opts.arch },
+            stdout: true,
+            stderr: true,
+            logCommand: true,
+            toolsVersion: 14,
+            consoleLoggerParameters: opts.verbose
+        }));
 });
 
-gulp.task('buildnativenetworkproxy', function() {
+gulp.task('buildnativenetworkproxy', function () {
     const opts = getNativeBuildOptions();
+
     return gulp.src('native/NetworkProxy/NetworkProxy.vcxproj', { base: '.' })
-            .pipe(msbuild({
-                targets: [opts.target],
-                configuration: opts.config,
-                properties: { Platform: opts.arch },
-                stdout: true,
-                stderr: true,
-                logCommand: true,
-                toolsVersion:14,
-                consoleLoggerParameters: opts.verbose
-            }));
+        .pipe(msbuild({
+            targets: [opts.target],
+            configuration: opts.config,
+            properties: { Platform: opts.arch },
+            stdout: true,
+            stderr: true,
+            logCommand: true,
+            toolsVersion: 14,
+            consoleLoggerParameters: opts.verbose
+        }));
 });
 
-gulp.task('buildnativeaddon', ['buildnativeprojects'], function(done) {
-    const opts = getNativeBuildOptions();
-    const arch = opts.arch == "Win32" ? "ia32" : "x64";
-    const gypPath = __dirname + "/node_modules/.bin/node-gyp";
+gulp.task('buildnativeprojects', ['buildnativeproxy', 'buildnativenetworkproxy']);
 
-    return exec('cd native/Addon && ' + gypPath + ' clean configure build --arch=' + arch + " --module_arch=" + opts.outArch, function (err, stdout, stderr) {
+gulp.task('buildnativeaddon', ['buildnativeprojects'], function (done) {
+    const opts = getNativeBuildOptions();
+    const arch = opts.arch === 'Win32' ? 'ia32' : 'x64';
+    const gypPath = path.join(__dirname, '/node_modules/.bin/node-gyp');
+
+    return exec('cd native/Addon && ' + gypPath + ' clean configure build --arch=' + arch, function (err, stdout, stderr) {
         logExec(stdout);
         logExec(stderr); // node-gyp sends info through stderr and we don't want to treat it as error
         done(err);
@@ -147,61 +109,55 @@ gulp.task('buildnativeaddon', ['buildnativeprojects'], function(done) {
 
 gulp.task('buildnative', gulpSequence(['buildnativeaddon'], ['copyproxy', 'copynetworkproxy']));
 
-
-gulp.task('copyproxy', function()  {
+gulp.task('copyproxy', function () {
     const opts = getNativeBuildOptions();
+
     return gulp.src([
-                opts.outDir + 'Proxy' + opts.outArch + '.dll',
-                opts.outDir + 'Proxy' + opts.outArch + '.pdb'
-            ], { base: opts.outDir })
-            .pipe(gulp.dest('out/lib'));
+        opts.outDir + 'Proxy.dll',
+        opts.outDir + 'Proxy.pdb'
+    ])
+        .pipe(gulp.dest('out/lib'));
 });
 
-gulp.task('copynetworkproxy', function()  {
+gulp.task('copynetworkproxy', function () {
     const opts = getNativeBuildOptions();
-    return gulp.src([
-                opts.networkOutDir + 'NetworkProxy.exe',
-                opts.networkOutDir + 'NetworkProxy.pdb'
-            ])
-            .pipe(gulp.dest('out/lib'));
+
+    return gulp.src(
+        [
+            opts.networkOutDir + 'NetworkProxy.exe',
+            opts.networkOutDir + 'NetworkProxy.pdb'
+        ])
+        .pipe(gulp.dest('out/lib'));
 });
 
 gulp.task('default', ['buildnative']);
 
-gulp.task('buildall', ['buildscript', 'buildnative']);
-
-gulp.task('build', ['buildall']);
-
-gulp.task('watch', ['buildscript'], function() {
-    log('Watching build sources...');
-    return gulp.watch(sources, ['buildscript']);
-});
-
 function test() {
     return gulp.src('out/test/**/*.test.js', { read: false })
         .pipe(mocha({ ui: 'tdd' }))
-        .on('error', function(e) {
+        .on('error', function (e) {
             log(e ? e.toString() : 'error in test task!');
-            this.emit('end');
+            this.emit('end'); // eslint-disable-line no-invalid-this
         });
 }
 
 gulp.task('build-test', ['build'], test);
 gulp.task('test', test);
 
-gulp.task('watch-build-test', ['build', 'build-test'], function() {
+gulp.task('watch-build-test', ['build', 'build-test'], function () {
     return gulp.watch(sources, ['build', 'build-test']);
 });
 
-gulp.task('copypasta', function(done) {
+gulp.task('copypasta', function (done) {
     // Recursively copy out folder to another folder
-    if(!argv.outDir || !fs.existsSync(argv.outDir)) {
-        log(colors.red("Usage: gulp copypasta --outDir <path>"));
+    if (!argv.outDir || !fs.existsSync(argv.outDir)) { // eslint-disable-line no-sync
+        log(colors.red('Usage: gulp copypasta --outDir <path>'));
+
         return;
     }
 
     exec(`xcopy out ${argv.outDir} /S /Y /D`, function (err, stdout, stderr) {
-        logExec(stdout, stderr)
+        logExec(stdout, stderr);
         done(err);
-    })
-})
+    });
+});

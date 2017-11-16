@@ -1,13 +1,13 @@
 {
   "name": "edge-diagnostics-adapter",
-  "version": "0.5.0",
+  "version": "0.6.0-unsigned",
   "description": "Microsoft Edge Diagnostics Adapter",
   "main": "out/src/edgeAdapter.js",
   "files": [
-    "out\\lib",
-    "out\\src",
+    "out/src",
     "redistributable",
-    "scripts"
+    "scripts",
+    "tsconfig.json"
   ],
   "keywords": [
     "edge",
@@ -22,29 +22,49 @@
     "url": "https://github.com/Microsoft/edge-diagnostics-adapter.git"
   },
   "dependencies": {
-    "ws": "1.1.0"
+    "node-pre-gyp": "^0.6.38",
+    "regedit": "^2.2.7",
+    "ws": "3.2.0",
+    "yargs": "^9.0.1"
   },
   "devDependencies": {
+    "@types/node": "^8.0.32",
+    "@types/ws": "^3.0.2",
+    "@types/yargs": "^8.0.2",
+    "cpx": "^1.5.0",
     "gulp": "^3.9.1",
-    "gulp-mocha": "^2.1.3",
-    "gulp-msbuild": "^0.4.4",
+    "gulp-mocha": "^4.3.1",
+    "gulp-msbuild": "^0.5.3",
     "gulp-sequence": "^0.4.6",
-    "gulp-sourcemaps": "^1.5.2",
-    "gulp-tslint": "^3.3.1",
-    "gulp-typescript": "^2.12.1",
-    "gulp-util": "^3.0.5",
-    "nan": "^2.2.1",
-    "node-gyp": "^3.5.0",
-    "tslint": "^3.3.0",
-    "typescript": "1.8.7",
-    "typings": "1.0.4",
-    "yargs": "^4.6.0"
+    "gulp-util": "^3.0.8",
+    "nan": "^2.7.0",
+    "node-gyp": "^3.6.2",
+    "rimraf": "^2.6.2",
+    "tslint": "^5.7.0",
+    "typescript": "2.5.3"
+  },
+  "binary": {
+    "module_name": "edge-diagnostics-adapter",
+    "module_path": "out/",
+    "host": "https://github.com/Microsoft/edge-diagnostics-adapter/releases/download/",
+    "remote_path": "v{version}"
   },
   "cpu": [
     "x64",
-    "x32"
+    "ia32"
+  ],
+  "os": [
+    "win32"
   ],
   "scripts": {
-    "postinstall": "node scripts/postinstall.js"
+    "copy:static": "cpx \"./src/**/{!(*.ts),.!(ts)}\" out/src",
+    "build": "npm run clean && npm run lint && npm run build:ts && npm run copy:static && prebuild.cmd && npm run build:native",
+    "build:native": "npm config set msvs_version 2015 && gulp buildnative",
+    "build:ts": "tsc",
+    "clean": "rimraf out",
+    "install": "node-pre-gyp install --fallback-to-build",
+    "lint": "tslint /src/**/*.ts",
+    "postinstall": "node scripts/postinstall.js",
+    "watch:ts": "tsc --watch"
   }
 }

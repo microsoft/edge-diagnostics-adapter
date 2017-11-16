@@ -1,32 +1,13 @@
-﻿//
+﻿///<reference path='../../lib/Addon.node.d.ts' />
+//
 // Copyright (C) Microsoft. All rights reserved.
 //
 
-// Override require to pick the correct addon architecture at runtime
-(function () {
-    var originalReq = require;
-    require = <any>function (path: string) {
-        if (path !== "../../lib/Addon.node") {
-            return originalReq(path);
-        } else {
-            let mod;
-            try {
-                mod = originalReq(path);
-            } catch (ex) {
-                try {
-                    mod = originalReq("../../lib/Addon64.node");
-                } catch (ex) {
-                    // Potential node version mismatch error
-                    console.log(ex.message, ex.stack);
-                }
-            }
-            return mod;
-        }
-    }
-})();
-
-import { IChromeInstance } from '../../lib/EdgeAdapterInterfaces'
+import { IChromeInstance } from '../../lib/EdgeAdapterInterfaces';
 import * as edgeAdapter from '../../lib/Addon.node';
+// const binding_path = binary.find(path.resolve(path.join(__dirname,'../../../package.json')));
+// var edgeAdapter = require(binding_path);
+
 import * as http from 'http';
 import * as ws from 'ws';
 import * as fs from 'fs';
@@ -69,7 +50,7 @@ export module EdgeAdapter {
 
             this._httpServer = http.createServer((req, res) => this.onServerRequest(req, res));
             this._webSocketServer = new WebSocketServer({ server: this._httpServer });
-            this._webSocketServer.on('connection', (client) => this.onWSSConnection(client));
+            this._webSocketServer.on('connection', (client, message) => this.onWSSConnection(client, message));
 
             this._httpServer.listen(serverPort, "0.0.0.0");
         }
@@ -119,7 +100,7 @@ export module EdgeAdapter {
                     break;
 
                 case '/json/new':
-                    // create a new tab 
+                    // create a new tab
                     if (!param) {
                         param = "";
                     }
@@ -177,9 +158,12 @@ export module EdgeAdapter {
             return null;
         }
 
-        private onWSSConnection(ws: ws): void {
+        private onWSSConnection(ws: ws, message?: http.IncomingMessage): void {
             // Normalize request url
-            let url = ws.upgradeReq.url.trim().toUpperCase();
+            if (!message) {
+                return;
+            }
+            let url = message.url.trim().toUpperCase();
             if (url.lastIndexOf('/') == url.length - 1) {
                 url = url.substr(0, url.length - 1);
             }
@@ -227,14 +211,14 @@ export module EdgeAdapter {
 
             if (succeeded && networkInstanceId) {
                 // Forward messages to the proxy
-                ws.on('message', (msg) => {
+                ws.on('message', (msg: ws.Data) => {
                     if (this._diagLogging) {
                         console.log("Client:", instanceId, msg);
                     }
                     if (this.isMessageForNetworkProxy(msg)) {
-                        edgeAdapter.forwardTo(networkInstanceId, msg);
+                        edgeAdapter.forwardTo(networkInstanceId, msg.toString());
                     } else {
-                        edgeAdapter.forwardTo(instanceId, msg);
+                        edgeAdapter.forwardTo(instanceId, msg.toString());
                     }
                 });
 
@@ -264,10 +248,10 @@ export module EdgeAdapter {
             this.onLogMessage(message);
         }
 
-        private isMessageForNetworkProxy(requestMessage: string): boolean {
+        private isMessageForNetworkProxy(requestMessage: ws.Data): boolean {
             var parsedMessage: Object;
             try {
-                parsedMessage = JSON.parse(requestMessage);
+                parsedMessage = JSON.parse(requestMessage.toString());
             } catch (SyntaxError) {
                 console.log("Error parsing request message: ", requestMessage);
                 return false;
@@ -327,7 +311,7 @@ export module EdgeAdapter {
             }
         }
 
-        private getEdgeJson(host: string): IChromeInstance[] {
+        private getEdgeJson(host: string | string[]): IChromeInstance[] {
             const chromeInstances: IChromeInstance[] = [];
             const map = new Map<string, string>();
 
