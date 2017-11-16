@@ -1,4 +1,4 @@
-> **Notice of deprecation**
+> **Notice of deprecation**<br />
 > This repository has been deprecated. A native replacement for VS Code debugging of the EdgeHTML platform is under development by the Edge DevTools team. While an exact ship date is unknown, this functionality is expected to ship in Windows 10 in the first half of 2018.
 
 # Edge Diagnostics Adapter
