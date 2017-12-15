@@ -1,15 +1,15 @@
-# Edge Diagnostics Adapter
+# Microsoft Edge Diagnostics Adapter
 
 [![Build status](https://ci.appveyor.com/api/projects/status/wo4fnnx8735xa07d/branch/master?svg=true)](https://ci.appveyor.com/project/molant/edge-diagnostics-adapter/branch/master)
 
-Edge Diagnostics Adapter is a protocol adapter that enables tools to
-debug and diagnose Edge using the [Chrome DevTools Protocol][cdp-protocol].
+Microsoft Edge Diagnostics Adapter is a protocol adapter that enables tools to
+debug and diagnose Microsoft Edge using the [Chrome DevTools Protocol][cdp-protocol].
 
-The latest version of Edge Diagnostics Adapter works in Windows 10 - 14393 x64.
+The latest version of Microsoft Edge Diagnostics Adapter works in Windows 10 - 14393 x64.
 
 ## Installation and usage
 
-You can install Edge Diagnostics Adapter via [`npm`][npm]:
+You can install Microsoft Edge Diagnostics Adapter via [`npm`][npm]:
 
 ```bash
 
