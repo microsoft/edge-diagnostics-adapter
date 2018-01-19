@@ -23,7 +23,7 @@ Once you have it installed locally you can execute it as follows:
 
 ```bash
 
-node /path/to/edge-diagnostics-adapter/out/src/edgeAdapter.js --port=8080 --servetools
+node /path/to/edge-diagnostics-adapter/out/src/edgeAdapter.js --port=9222 --servetools
 
 ```
 
