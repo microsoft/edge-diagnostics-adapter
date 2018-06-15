@@ -216,9 +216,9 @@ export module EdgeAdapter {
                         console.log("Client:", instanceId, msg);
                     }
                     if (this.isMessageForNetworkProxy(msg)) {
-                        edgeAdapter.forwardTo(networkInstanceId, msg.toString());
+                        edgeAdapter.forwardTo(networkInstanceId.toString(), msg.toString());
                     } else {
-                        edgeAdapter.forwardTo(instanceId, msg.toString());
+                        edgeAdapter.forwardTo(instanceId.toString(), msg.toString());
                     }
                 });
 
