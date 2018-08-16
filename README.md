@@ -127,7 +127,7 @@ any additional questions or comments.
 [cdp-protocol]: https://chromedevtools.github.io/devtools-protocol/
 [coc]: https://opensource.microsoft.com/codeofconduct/
 [coc-faq]: https://opensource.microsoft.com/codeofconduct/faq/
-[connector-edge15]: https://github.com/sonarwhal/connector-edge15/blob/master/src/lib/connectors/connector-edge15/connector-edge15-launcher.ts
+[connector-edge]: https://github.com/webhintio/hint/tree/7d4f7b2f3f44037ebaf8af380750fb2efe20d02a/packages/connector-edge
 [edge-launch]: https://github.com/Microsoft/edge-diagnostics-launch
 [localhost]: http://localhost:9222
 [npm]: https://npmjs.com/package/edge-diagnostics-adapter
