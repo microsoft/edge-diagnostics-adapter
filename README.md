@@ -1,5 +1,5 @@
 > **Notice of deprecation**<br />
-> This repository has been deprecated. A native replacement for IDE integration with the EdgeHTML platform for debugging and other diagnostics tasks was developed by the Edge team and released in the Windows 10 April 2018 update. To learn more, read about the [Microsoft Edge DevTools Protocol](https://docs.microsoft.com/en-us/microsoft-edge/devtools-protocol/).
+> This repository has been deprecated. A native replacement for VS Code debugging of the EdgeHTML platform is under development by the Edge DevTools team. While an exact ship date is unknown, this functionality is expected to ship in Windows 10 in the first half of 2018.
 
 # Edge Diagnostics Adapter
 [![build status](https://travis-ci.org/Microsoft/edge-diagnostics-adapter.svg?branch=master)](https://travis-ci.org/Microsoft/edge-diagnostics-adapter)
