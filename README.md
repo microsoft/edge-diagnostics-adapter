@@ -1,5 +1,5 @@
 **Notice of deprecation**<br />
- > This repository has been deprecated. A native replacement for IDE integration with the EdgeHTML platform for debugging and other diagnostics tasks was developed by the Edge team and released in the Windows 10 April 2018 update. To learn more, read about the [Microsoft Edge DevTools Protocol](https://docs.microsoft.com/en-us/microsoft-edge/devtools-protocol/). You can also learn about the ongoing cross-browser work to make web platform integration more consistent via the [W3C DevTools Protocol Incubator Group](https://github.com/WICG/devtools-protocol).
+ > This repository has been deprecated. A native replacement for IDE integration with the EdgeHTML platform for debugging and other diagnostics tasks was developed by the Edge team and released in the Windows 10 April 2018 update. To learn more, read about the [Microsoft Edge DevTools Protocol](https://docs.microsoft.com/en-us/microsoft-edge/devtools-protocol/). You can also learn about the ongoing cross-browser work to make web platform tooling integration more consistent via the [W3C DevTools Protocol Incubator Group](https://github.com/WICG/devtools-protocol).
 
 # Microsoft Edge Diagnostics Adapter
 
